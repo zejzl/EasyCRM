@@ -1,0 +1,2 @@
+# EasyCRM
+Just an EasyCRM
