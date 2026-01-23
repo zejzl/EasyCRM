@@ -1,0 +1,346 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  avatar        String?
+  role          UserRole  @default(SALES_REP)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  team          Team?     @relation(fields: [teamId], references: [id])
+  teamId        String?
+  
+  ownedDeals    Deal[]    @relation("DealOwner")
+  activities    Activity[]
+  notes         Note[]
+  emailTemplates EmailTemplate[]
+  
+  @@index([email])
+  @@index([teamId])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  SALES_MANAGER
+  SALES_REP
+  VIEWER
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     User[]
+  
+  @@map("teams")
+}
+
+// ============================================
+// CORE CRM ENTITIES
+// ============================================
+
+model Company {
+  id            String        @id @default(cuid())
+  name          String
+  domain        String?       @unique
+  industry      String?
+  size          CompanySize?
+  revenue       Decimal?      @db.Decimal(15, 2)
+  description   String?       @db.Text
+  website       String?
+  linkedinUrl   String?
+  phone         String?
+  
+  // Address
+  address       String?
+  city          String?
+  state         String?
+  country       String?
+  postalCode    String?
+  
+  // Metadata
+  tags          String[]
+  customFields  Json?
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  contacts      Contact[]
+  deals         Deal[]
+  activities    Activity[]
+  notes         Note[]
+  
+  @@index([name])
+  @@index([domain])
+  @@map("companies")
+}
+
+enum CompanySize {
+  STARTUP       // 1-10
+  SMALL         // 11-50
+  MEDIUM        // 51-200
+  LARGE         // 201-1000
+  ENTERPRISE    // 1000+
+}
+
+model Contact {
+  id            String    @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String?
+  mobile        String?
+  title         String?
+  department    String?
+  linkedinUrl   String?
+  avatarUrl     String?
+  
+  isPrimary     Boolean   @default(false)
+  
+  // Metadata
+  tags          String[]
+  customFields  Json?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String
+  
+  deals         Deal[]
+  activities    Activity[]
+  notes         Note[]
+  
+  @@index([email])
+  @@index([companyId])
+  @@index([firstName, lastName])
+  @@map("contacts")
+}
+
+// ============================================
+// DEALS & PIPELINE
+// ============================================
+
+model Deal {
+  id            String      @id @default(cuid())
+  name          String
+  value         Decimal     @db.Decimal(15, 2)
+  probability   Int         @default(50) // 0-100
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+  
+  stage         PipelineStage @relation(fields: [stageId], references: [id])
+  stageId       String
+  
+  status        DealStatus  @default(OPEN)
+  lostReason    String?
+  
+  // Source
+  source        String?     // e.g., "Website", "Referral", "Cold Call"
+  
+  // Metadata
+  tags          String[]
+  customFields  Json?
+  description   String?     @db.Text
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String
+  
+  contact       Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId     String?
+  
+  owner         User        @relation("DealOwner", fields: [ownerId], references: [id])
+  ownerId       String
+  
+  activities    Activity[]
+  notes         Note[]
+  
+  @@index([stageId])
+  @@index([companyId])
+  @@index([ownerId])
+  @@index([status])
+  @@map("deals")
+}
+
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+model PipelineStage {
+  id            String   @id @default(cuid())
+  name          String
+  order         Int
+  probability   Int      @default(50) // Default probability for deals in this stage
+  isActive      Boolean  @default(true)
+  color         String?  // Hex color for UI
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deals         Deal[]
+  
+  @@unique([order])
+  @@map("pipeline_stages")
+}
+
+// ============================================
+// ACTIVITIES & ENGAGEMENT
+// ============================================
+
+model Activity {
+  id            String        @id @default(cuid())
+  type          ActivityType
+  subject       String
+  description   String?       @db.Text
+  duration      Int?          // in minutes
+  
+  scheduledAt   DateTime?
+  completedAt   DateTime?
+  
+  // Email specific
+  emailFrom     String?
+  emailTo       String[]
+  emailCc       String[]
+  emailSubject  String?
+  emailBody     String?       @db.Text
+  emailThreadId String?
+  
+  // Metadata
+  metadata      Json?
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  createdBy     User          @relation(fields: [createdById], references: [id])
+  createdById   String
+  
+  company       Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String?
+  
+  contact       Contact?      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contactId     String?
+  
+  deal          Deal?         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId        String?
+  
+  @@index([type])
+  @@index([createdById])
+  @@index([companyId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([scheduledAt])
+  @@map("activities")
+}
+
+enum ActivityType {
+  EMAIL
+  CALL
+  MEETING
+  TASK
+  NOTE
+  SMS
+}
+
+model Note {
+  id            String   @id @default(cuid())
+  content       String   @db.Text
+  isPinned      Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  createdById   String
+  
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String?
+  
+  contact       Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contactId     String?
+  
+  deal          Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId        String?
+  
+  @@index([createdById])
+  @@index([companyId])
+  @@index([contactId])
+  @@index([dealId])
+  @@map("notes")
+}
+
+// ============================================
+// EMAIL TEMPLATES
+// ============================================
+
+model EmailTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  subject       String
+  body          String   @db.Text
+  isShared      Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  createdById   String
+  
+  @@index([createdById])
+  @@map("email_templates")
+}
+
+// ============================================
+// SYSTEM & AUDIT
+// ============================================
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  action        String   // e.g., "CREATE", "UPDATE", "DELETE"
+  entityType    String   // e.g., "Deal", "Contact"
+  entityId      String
+  userId        String
+  changes       Json?    // Store what changed
+  ipAddress     String?
+  userAgent     String?
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
