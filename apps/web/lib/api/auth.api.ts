@@ -1,118 +1,62 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { LoginInput, RegisterInput, AuthResponse } from '@crm/types'
-import apiClient from './client'
-import { useAuthStore } from '../store/auth.store'
-import { useRouter } from 'next/navigation'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LoginInput, RegisterInput } from '@crm/types';
+import { useAuthStore } from '../store/auth.store';
 
 // Login mutation
 export const useLogin = () => {
-  const { setUser, setTokens } = useAuthStore()
-  const router = useRouter()
-  const queryClient = useQueryClient()
+  const login = useAuthStore((state) => state.login);
 
   return useMutation({
     mutationFn: async (credentials: LoginInput) => {
-      const { data } = await apiClient.post<AuthResponse>(
-        '/api/auth/login',
-        credentials
-      )
-      return data
+      return await login(credentials);
     },
-    onSuccess: (data) => {
-      // Store tokens
-      setTokens(data.accessToken, data.refreshToken)
-
-      // Store user
-      setUser(data.user)
-
-      // Invalidate current user query
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] })
-
-      // Redirect to dashboard
-      router.push('/')
-    },
-    onError: (error: any) => {
-      console.error('Login failed:', error.response?.data?.error || error.message)
-    },
-  })
-}
+  });
+};
 
 // Register mutation
 export const useRegister = () => {
-  const { setUser, setTokens } = useAuthStore()
-  const router = useRouter()
-  const queryClient = useQueryClient()
+  const register = useAuthStore((state) => state.register);
 
   return useMutation({
     mutationFn: async (userData: RegisterInput) => {
-      const { data } = await apiClient.post<AuthResponse>(
-        '/api/auth/register',
-        userData
-      )
-      return data
+      return await register(userData);
     },
-    onSuccess: (data) => {
-      // Store tokens
-      setTokens(data.accessToken, data.refreshToken)
+  });
+};
 
-      // Store user
-      setUser(data.user)
-
-      // Invalidate current user query
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] })
-
-      // Redirect to dashboard
-      router.push('/')
-    },
-    onError: (error: any) => {
-      console.error(
-        'Registration failed:',
-        error.response?.data?.error || error.message
-      )
-    },
-  })
-}
-
-// Get current user query
+// Current user query
 export const useCurrentUser = () => {
-  const { isAuthenticated, setUser, setLoading } = useAuthStore()
+  const { user, isAuthenticated, setUser } = useAuthStore();
 
   return useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      const { data } = await apiClient.get('/api/users/me')
-      return data
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+      const userData = await response.json();
+      setUser(userData);
+      return userData;
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !user,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: false,
-    onSuccess: (data) => {
-      setUser(data)
-      setLoading(false)
-    },
-    onError: () => {
-      setUser(null)
-      setLoading(false)
-    },
-  })
-}
+  });
+};
 
 // Logout mutation
 export const useLogout = () => {
-  const { logout } = useAuthStore()
-  const queryClient = useQueryClient()
+  const logout = useAuthStore((state) => state.logout);
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      // Call logout endpoint (optional, mainly for server-side cleanup)
-      await apiClient.post('/api/auth/logout')
+      logout();
     },
     onSettled: () => {
       // Clear all queries
-      queryClient.clear()
-
-      // Logout from store (clears tokens and redirects)
-      logout()
+      queryClient.clear();
     },
-  })
-}
+  });
+};

@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a B2B CRM system built as a monorepo using Turborepo. The project currently has Phase 1 complete (backend API) with Phase 2 planned (Next.js frontend).
+This is a B2B CRM system built as a monorepo using Turborepo. The project has Phase 1-3 complete with Phase 4 in progress.
 
-**Current State**: Fully functional Express.js REST API with PostgreSQL, Prisma ORM, Redis caching, and JWT authentication.
+**Current State**: Fully functional backend API + Next.js frontend with authentication, responsive layout, and navigation. Ready for CRUD operations implementation.
 
 ## Essential Commands
 
 ### Initial Setup
+
 ```bash
 # Install dependencies
 npm install
@@ -32,6 +33,7 @@ cd packages/database && npm run db:seed
 ```
 
 ### Development
+
 ```bash
 # Start API server (port 4000)
 npm run dev
@@ -50,6 +52,7 @@ npm run test
 ```
 
 ### Database Management
+
 ```bash
 # Run migrations
 npm run db:migrate
@@ -68,6 +71,7 @@ cd packages/database && npx prisma migrate reset
 ```
 
 ### Docker
+
 ```bash
 # Start services
 npm run docker:up
@@ -80,12 +84,15 @@ docker ps
 ```
 
 ### Testing API
+
 Use the provided script:
+
 ```bash
 ./test-api.sh
 ```
 
 Or test manually with default credentials:
+
 - Admin: `admin@crm.local` / `admin123`
 - Sales Rep: `sales@crm.local` / `sales123`
 
@@ -119,6 +126,7 @@ crm/
 - `packages/types` exports Zod validation schemas and TypeScript types
 
 When adding new features that affect multiple packages, update in this order:
+
 1. Database schema in `packages/database/schema.prisma`
 2. Run `npx prisma generate` to update client
 3. Add Zod schemas in `packages/types/index.ts`
@@ -127,10 +135,12 @@ When adding new features that affect multiple packages, update in this order:
 ### Authentication Flow
 
 JWT-based authentication with two token types:
+
 - **Access Token**: 15-minute expiration, used for API requests
 - **Refresh Token**: 7-day expiration, used to get new access tokens
 
 All routes except `/api/auth/*` require authentication via the `authenticate` middleware, which:
+
 1. Extracts Bearer token from Authorization header
 2. Verifies JWT signature and expiration
 3. Checks user exists and is active in database
@@ -143,6 +153,7 @@ Use `authorize(...roles)` middleware for role-based access control (ADMIN, SALES
 **Core Entities**: User, Team, Company, Contact, Deal, Activity, Note, PipelineStage, EmailTemplate, AuditLog
 
 **Important Relationships**:
+
 - Company (1) ──< (N) Contact, Deal, Activity
 - Deal belongs to PipelineStage, Company, Contact (optional), User (owner)
 - Activities can link to Company, Contact, and/or Deal
@@ -154,18 +165,21 @@ Use `authorize(...roles)` middleware for role-based access control (ADMIN, SALES
 ### Request/Response Pattern
 
 All API routes follow this pattern:
+
 1. Zod validation of request body using schemas from `@crm/types`
 2. Business logic and Prisma database queries
 3. Return JSON response with proper HTTP status codes
 4. Global error handling via `errorHandler` middleware
 
 Standard response format:
+
 - Success: `{ id, ...data }` or `{ data: [...], pagination: {...} }` for lists
 - Error: `{ error: "message" }`
 
 ### Environment Variables
 
 Required variables (see `.env.example`):
+
 - `DATABASE_URL`: PostgreSQL connection string
 - `REDIS_URL`: Redis connection string
 - `JWT_SECRET`: Secret for signing access tokens
@@ -177,12 +191,14 @@ Required variables (see `.env.example`):
 ### Adding New Features
 
 **For new API endpoints**:
+
 1. Define Zod schema in `packages/types/index.ts`
 2. Create route file in `apps/api/src/routes/`
 3. Import and register route in `apps/api/src/index.ts`
 4. Use `authenticate` middleware for protected routes
 
 **For database changes**:
+
 1. Update `packages/database/schema.prisma`
 2. Generate Prisma client: `cd packages/database && npx prisma generate`
 3. Create migration: `npx prisma migrate dev --name descriptive_name`
@@ -191,6 +207,7 @@ Required variables (see `.env.example`):
 ### Code Patterns
 
 **Authentication in routes**:
+
 ```typescript
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 
@@ -201,6 +218,7 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
 ```
 
 **Validation with Zod**:
+
 ```typescript
 import { createCompanySchema } from '@crm/types';
 
@@ -212,11 +230,14 @@ if (!result.success) {
 ```
 
 **Prisma client usage**:
+
 ```typescript
 import { prisma } from '@crm/database';
 
 const companies = await prisma.company.findMany({
-  where: { /* ... */ },
+  where: {
+    /* ... */
+  },
   include: { contacts: true, deals: true }, // Include relations
   skip: (page - 1) * limit,
   take: limit,
@@ -226,6 +247,7 @@ const companies = await prisma.company.findMany({
 ### Testing
 
 The project uses Vitest for testing. Run tests with:
+
 ```bash
 npm run test              # All tests
 cd apps/api && npm test   # API tests only

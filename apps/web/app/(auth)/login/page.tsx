@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { loginSchema, LoginInput } from '@crm/types'
-import { useLogin } from '@/lib/api/auth.api'
-import Link from 'next/link'
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema, LoginInput } from '@crm/types';
+import { useLogin } from '@/lib/api/auth.api';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const login = useLogin()
-  const [error, setError] = useState<string | null>(null)
+  const login = useLogin();
+  const [error, setError] = useState<string | null>(null);
 
   const {
     register,
@@ -18,26 +18,22 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-  })
+  });
 
   const onSubmit = async (data: LoginInput) => {
     try {
-      setError(null)
-      await login.mutateAsync(data)
+      setError(null);
+      await login.mutateAsync(data);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.')
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Sign in to your account
-        </h1>
-        <p className="text-gray-600">
-          Enter your credentials to access your CRM
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h1>
+        <p className="text-gray-600">Enter your credentials to access your CRM</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -48,10 +44,7 @@ export default function LoginPage() {
         )}
 
         <div className="space-y-2">
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email address
           </label>
           <input
@@ -62,16 +55,11 @@ export default function LoginPage() {
             className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
             placeholder="you@company.com"
           />
-          {errors.email && (
-            <p className="text-sm text-red-600">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Password
           </label>
           <input
@@ -82,9 +70,7 @@ export default function LoginPage() {
             className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
             placeholder="Enter your password"
           />
-          {errors.password && (
-            <p className="text-sm text-red-600">{errors.password.message}</p>
-          )}
+          {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
         </div>
 
         <div className="flex items-center justify-between">
@@ -95,19 +81,13 @@ export default function LoginPage() {
               type="checkbox"
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <label
-              htmlFor="remember-me"
-              className="ml-2 block text-sm text-gray-700"
-            >
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
               Remember me
             </label>
           </div>
 
           <div className="text-sm">
-            <a
-              href="#"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
+            <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
               Forgot password?
             </a>
           </div>
@@ -130,11 +110,8 @@ export default function LoginPage() {
       </form>
 
       <div className="text-center text-sm text-gray-600">
-        Don't have an account?{' '}
-        <Link
-          href="/register"
-          className="font-medium text-blue-600 hover:text-blue-500"
-        >
+        Don&apos;t have an account?{' '}
+        <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
           Sign up
         </Link>
       </div>
@@ -148,5 +125,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

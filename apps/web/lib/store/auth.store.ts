@@ -1,27 +1,30 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { LoginInput, RegisterInput } from '@crm/types';
+import apiClient from '../api/client';
 
 interface User {
-  id: string
-  email: string
-  name: string
-  role: string
-  avatar?: string
+  id: string;
+  email: string;
+  name: string;
+  role: 'ADMIN' | 'SALES_MANAGER' | 'SALES_REP' | 'VIEWER';
+  avatar?: string;
 }
 
 interface AuthState {
-  user: User | null
-  accessToken: string | null
-  refreshToken: string | null
-  isAuthenticated: boolean
-  isLoading: boolean
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
 
   // Actions
-  setUser: (user: User | null) => void
-  setTokens: (accessToken: string, refreshToken: string) => void
-  setLoading: (loading: boolean) => void
-  logout: () => void
-  initialize: () => void
+  login: (credentials: LoginInput) => Promise<void>;
+  register: (userData: RegisterInput) => Promise<void>;
+  logout: () => void;
+  refreshAccessToken: () => Promise<boolean>;
+  setUser: (user: User | null) => void;
+  initialize: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -31,68 +34,92 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-      isLoading: true,
+      isLoading: false,
 
-      setUser: (user) => {
-        set({
-          user,
-          isAuthenticated: !!user,
-          isLoading: false,
-        })
-      },
+      login: async (credentials: LoginInput) => {
+        set({ isLoading: true });
+        try {
+          const response = await apiClient.post('/api/auth/login', credentials);
+          const { user, accessToken, refreshToken } = response.data;
 
-      setTokens: (accessToken, refreshToken) => {
-        // Store tokens in localStorage for axios interceptor
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken)
-          localStorage.setItem('refreshToken', refreshToken)
-
-          // Also set cookie for middleware
-          document.cookie = `accessToken=${accessToken}; path=/; max-age=${15 * 60}` // 15 minutes
-          document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${7 * 24 * 60 * 60}` // 7 days
+          set({
+            user,
+            accessToken,
+            refreshToken,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
         }
-
-        set({
-          accessToken,
-          refreshToken,
-          isAuthenticated: true,
-        })
       },
 
-      setLoading: (loading) => {
-        set({ isLoading: loading })
+      register: async (userData: RegisterInput) => {
+        set({ isLoading: true });
+        try {
+          const response = await apiClient.post('/api/auth/register', userData);
+          const { user, accessToken, refreshToken } = response.data;
+
+          set({
+            user,
+            accessToken,
+            refreshToken,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
       },
 
       logout: () => {
-        // Clear tokens from localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-
-          // Clear cookies
-          document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-          document.cookie = 'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-        }
-
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
-          isLoading: false,
-        })
+        });
 
         // Redirect to login
         if (typeof window !== 'undefined') {
-          window.location.href = '/login'
+          window.location.href = '/login';
         }
+      },
+
+      refreshAccessToken: async (): Promise<boolean> => {
+        const { refreshToken } = get();
+        if (!refreshToken) return false;
+
+        try {
+          const response = await apiClient.post('/api/auth/refresh', {
+            refreshToken,
+          });
+          const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+          set({
+            accessToken,
+            refreshToken: newRefreshToken,
+          });
+
+          return true;
+        } catch (error) {
+          // Refresh failed, logout
+          get().logout();
+          return false;
+        }
+      },
+
+      setUser: (user: User | null) => {
+        set({ user });
       },
 
       initialize: () => {
         // Check for stored tokens on app initialization
         if (typeof window !== 'undefined') {
-          const accessToken = localStorage.getItem('accessToken')
-          const refreshToken = localStorage.getItem('refreshToken')
+          const accessToken = localStorage.getItem('accessToken');
+          const refreshToken = localStorage.getItem('refreshToken');
 
           if (accessToken && refreshToken) {
             set({
@@ -100,20 +127,26 @@ export const useAuthStore = create<AuthState>()(
               refreshToken,
               isAuthenticated: true,
               isLoading: false,
-            })
+            });
           } else {
             set({
               isLoading: false,
-            })
+            });
           }
         }
       },
     }),
     {
       name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
       }),
     }
   )
-)
+);
+
+export const authStore = useAuthStore;

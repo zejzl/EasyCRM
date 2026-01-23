@@ -5,6 +5,7 @@ A production-ready, feature-rich CRM system built with modern technologies and b
 ## ✨ Features
 
 ### Core CRM
+
 - 👥 **Contact & Company Management** - Hierarchical organization structure
 - 💼 **Deal Pipeline** - Customizable stages with drag-and-drop Kanban
 - 📊 **Activity Tracking** - Emails, calls, meetings, tasks, and notes
@@ -12,10 +13,11 @@ A production-ready, feature-rich CRM system built with modern technologies and b
 - 🤝 **Team Collaboration** - Shared templates, @mentions, activity feeds
 
 ### Technical Highlights
+
 - ⚡ **Monorepo Architecture** - Turborepo for efficient builds
 - 🔒 **JWT Authentication** - Secure token-based auth with refresh tokens
 - 📱 **TypeScript End-to-End** - Full type safety across stack
-- 🎨 **Modern UI** - Next.js 14 with App Router (ready for Phase 2)
+- 🎨 **Modern UI** - Next.js 14 with App Router (Phase 2-3 complete)
 - 🗄️ **PostgreSQL + Prisma** - Type-safe database access
 - 🚀 **Redis** - Caching and real-time features
 - 🐳 **Docker** - Containerized development environment
@@ -23,6 +25,7 @@ A production-ready, feature-rich CRM system built with modern technologies and b
 ## 🏗️ Tech Stack
 
 ### Frontend (Next.js - Phase 2)
+
 - **Framework**: Next.js 14+ (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui
@@ -30,6 +33,7 @@ A production-ready, feature-rich CRM system built with modern technologies and b
 - **Forms**: React Hook Form + Zod validation
 
 ### Backend (Express)
+
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js
 - **Database**: PostgreSQL 16
@@ -38,6 +42,7 @@ A production-ready, feature-rich CRM system built with modern technologies and b
 - **Authentication**: JWT with bcrypt
 
 ### Infrastructure
+
 - **Monorepo**: Turborepo
 - **Container**: Docker Compose
 - **Package Manager**: npm workspaces
@@ -52,7 +57,7 @@ crm/
 │   │       ├── routes/   # API routes
 │   │       ├── middleware/
 │   │       └── index.ts
-│   └── web/              # Next.js frontend (Phase 2)
+│   └── web/              # Next.js frontend (Phase 2-3 complete)
 ├── packages/
 │   ├── database/         # Prisma schema & client
 │   ├── types/            # Shared TypeScript types & Zod schemas
@@ -113,30 +118,44 @@ npx prisma migrate dev
 npm run db:seed
 ```
 
-### 5. Start Development Server
+### 5. Start Development Servers
 
 ```bash
 # Return to root
 cd ../..
 
-# Start API server (runs on port 4000)
+# Start both API (port 4000) and Web (port 3000) servers
 npm run dev
+
+# Or start individually:
+npm run dev --workspace=@crm/api    # API only
+cd apps/web && npm run dev          # Web only (port 3000)
 ```
 
-### 6. Test the API
+### 6. Access the Application
 
 ```bash
-# Health check
+# API server: http://localhost:4000
+# Web application: http://localhost:3000
+
+# Test API health
 curl http://localhost:4000/health
 
-# Login with seed user
-curl -X POST http://localhost:4000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@crm.local",
-    "password": "admin123"
-  }'
+# Default login credentials:
+# Admin: admin@crm.local / admin123
+# Sales: sales@crm.local / sales123
 ```
+
+# Login with seed user
+
+curl -X POST http://localhost:4000/api/auth/login \
+ -H "Content-Type: application/json" \
+ -d '{
+"email": "admin@crm.local",
+"password": "admin123"
+}'
+
+````
 
 ## 🔑 Default Credentials
 
@@ -154,7 +173,7 @@ POST /api/auth/register    # Register new user
 POST /api/auth/login       # Login
 POST /api/auth/refresh     # Refresh access token
 POST /api/auth/logout      # Logout (client-side token removal)
-```
+````
 
 ### Companies
 
@@ -279,7 +298,8 @@ User (N) ──> (1) Team
 
 ## 🎯 Roadmap
 
-### ✅ Phase 1: Foundation (Complete)
+### ✅ Phase 1: Backend API (Complete)
+
 - [x] Monorepo setup with Turborepo
 - [x] Database schema with Prisma
 - [x] Express API with authentication
@@ -287,26 +307,41 @@ User (N) ──> (1) Team
 - [x] Analytics endpoints
 - [x] Docker development environment
 
-### 🚧 Phase 2: Frontend (Next Steps)
-- [ ] Next.js 14 app with App Router
-- [ ] Authentication UI (login, register)
-- [ ] Dashboard with metrics
-- [ ] Company & contact management UI
-- [ ] Deal pipeline with drag-and-drop
-- [ ] Activity feed and timeline
-- [ ] Responsive design
+### ✅ Phase 2: Authentication (Complete)
 
-### 📋 Phase 3: Advanced Features
-- [ ] Email integration (Gmail/Outlook OAuth)
-- [ ] Calendar sync
-- [ ] Real-time updates with WebSockets
-- [ ] Advanced search with filters
-- [ ] Bulk operations
-- [ ] File attachments
-- [ ] Custom fields builder
-- [ ] Email templates editor
+- [x] Next.js 14 app with App Router
+- [x] JWT authentication with auto-refresh
+- [x] Login/register forms with validation
+- [x] Route protection middleware
+- [x] User management and profiles
+
+### ✅ Phase 3: Core Layout & Navigation (Complete)
+
+- [x] Responsive dashboard layout
+- [x] Sidebar navigation with active states
+- [x] Professional header with user menu
+- [x] Mobile-responsive design
+- [x] shadcn/ui component integration
+
+### 🚧 Phase 4: CRUD Operations (In Progress)
+
+- [ ] Company management UI (list, create, edit, delete)
+- [ ] Contact management UI
+- [ ] Deal pipeline with Kanban board
+- [ ] Activity tracking interface
+- [ ] Data tables with sorting/filtering
+- [ ] Form validation and error handling
+
+### 📋 Phase 5: Analytics Dashboard (Planned)
+
+- [ ] Charts and metrics visualization
+- [ ] Sales funnel analytics
+- [ ] Performance dashboards
+- [ ] Revenue forecasting
+- [ ] Real-time updates
 
 ### 🚀 Phase 4: Production Ready
+
 - [ ] Unit and E2E tests
 - [ ] CI/CD pipeline
 - [ ] Performance optimization
@@ -318,12 +353,14 @@ User (N) ──> (1) Team
 ## 📖 Development Guidelines
 
 ### Code Style
+
 - Use TypeScript strict mode
 - Follow ESLint rules
 - Format with Prettier
 - Write meaningful commit messages
 
 ### Database Changes
+
 ```bash
 # Create a new migration
 cd packages/database
@@ -334,6 +371,7 @@ npx prisma migrate reset
 ```
 
 ### Adding New Features
+
 1. Update Prisma schema if needed
 2. Generate Prisma client: `npx prisma generate`
 3. Add Zod validation schemas in `packages/types`
@@ -343,6 +381,7 @@ npx prisma migrate reset
 ## 🐛 Troubleshooting
 
 ### Docker Issues
+
 ```bash
 # Reset Docker services
 npm run docker:down
@@ -351,6 +390,7 @@ npm run docker:up
 ```
 
 ### Database Connection Issues
+
 ```bash
 # Check if PostgreSQL is running
 docker ps
@@ -360,6 +400,7 @@ docker exec -it crm-postgres psql -U crm_user -d crm_db
 ```
 
 ### Port Already in Use
+
 ```bash
 # Find process using port 4000
 lsof -ti:4000 | xargs kill -9
@@ -374,6 +415,7 @@ MIT
 ## 🤝 Contributing
 
 Contributions welcome! Please:
+
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
@@ -382,6 +424,7 @@ Contributions welcome! Please:
 ## 📞 Support
 
 For issues and questions:
+
 - Open a GitHub issue
 - Check existing documentation
 - Review API examples

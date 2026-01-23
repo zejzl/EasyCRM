@@ -1,65 +1,49 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useAuthStore } from '@/lib/store/auth.store'
-import { useCurrentUser, useLogout } from '@/lib/api/auth.api'
-import { Loading } from '@crm/ui'
-import { LogOut, User } from 'lucide-react'
+import { useEffect } from 'react';
+import { useAuthStore } from '@/lib/store/auth.store';
+import { useCurrentUser } from '@/lib/api/auth.api';
+import { Loading } from '@crm/ui';
+import { Sidebar } from '@/components/layouts/Sidebar';
+import { Header } from '@/components/layouts/Header';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const { initialize, isLoading, user } = useAuthStore()
-  const { data: currentUser } = useCurrentUser()
-  const logout = useLogout()
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { initialize, isLoading, isAuthenticated } = useAuthStore();
+  const { data: currentUser } = useCurrentUser();
 
   useEffect(() => {
-    initialize()
-  }, [initialize])
+    initialize();
+  }, [initialize]);
 
+  // Show loading while initializing auth state
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loading size="lg" text="Loading..." />
       </div>
-    )
+    );
+  }
+
+  // If not authenticated, this layout shouldn't render (middleware should redirect)
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Simple header for now */}
-      <header className="border-b bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-blue-600">EasyCRM</h1>
-          </div>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar />
 
-          <div className="flex items-center gap-4">
-            {user && (
-              <>
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-gray-400" />
-                  <span className="font-medium text-gray-700">{user.name}</span>
-                  <span className="text-gray-400">({user.role})</span>
-                </div>
+      {/* Main content area */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <Header />
 
-                <button
-                  onClick={() => logout.mutate()}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="container mx-auto p-6">{children}</div>
+        </main>
+      </div>
     </div>
-  )
+  );
 }
