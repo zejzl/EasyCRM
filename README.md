@@ -137,6 +137,7 @@ cd apps/web && npm run dev          # Web only (port 3000)
 ```bash
 # API server: http://localhost:4000
 # Web application: http://localhost:3000
+# Companies CRUD: http://localhost:3000/companies
 
 # Test API health
 curl http://localhost:4000/health
@@ -323,14 +324,16 @@ User (N) ──> (1) Team
 - [x] Mobile-responsive design
 - [x] shadcn/ui component integration
 
-### 🚧 Phase 4: CRUD Operations (In Progress)
+### ✅ Phase 4: CRUD Operations (Companies Complete)
 
-- [ ] Company management UI (list, create, edit, delete)
-- [ ] Contact management UI
+- [x] Company management UI (list, create, edit, delete)
+- [x] Data tables with sorting/filtering/pagination
+- [x] Form validation and error handling
+- [x] Company detail pages with relationship views
+- [x] Search and real-time filtering
+- [ ] Contact management UI (next)
 - [ ] Deal pipeline with Kanban board
 - [ ] Activity tracking interface
-- [ ] Data tables with sorting/filtering
-- [ ] Form validation and error handling
 
 ### 📋 Phase 5: Analytics Dashboard (Planned)
 
