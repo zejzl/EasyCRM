@@ -7,7 +7,7 @@ A production-ready, feature-rich CRM system built with modern technologies and b
 ### Core CRM
 
 - 👥 **Contact & Company Management** - Hierarchical organization structure
-- 💼 **Deal Pipeline** - Customizable stages with drag-and-drop Kanban
+- 💼 **Money Maker Pipeline** - Interactive Kanban board with drag-and-drop sales management
 - 📊 **Activity Tracking** - Emails, calls, meetings, tasks, and notes
 - 📈 **Analytics & Reporting** - Sales funnel, revenue forecasting, performance metrics
 - 🤝 **Team Collaboration** - Shared templates, @mentions, activity feeds
@@ -78,9 +78,9 @@ crm/
 
 ## 📊 Current Status
 
-**Version**: 1.1.0  
+**Version**: 1.3.0  
 **Last Updated**: January 24, 2026  
-**Development Phase**: Phase 4 (CRUD Operations) - **Contacts Complete**
+**Development Phase**: Phase 5 (Deal Pipeline & Activity Tracking) - **Money Maker Pipeline Complete**
 
 ### ✅ What's Working Now
 
@@ -88,13 +88,16 @@ crm/
 - **Dashboard**: Responsive layout with navigation
 - **Companies**: Full CRUD operations with detail views
 - **Contacts**: Full CRUD operations with relationship management
+- **Deals Pipeline**: Interactive Kanban board with drag-and-drop
+- **Sales Intelligence**: Real-time pipeline analytics and forecasting
+- **Money Maker**: Complete sales opportunity management
 - **API**: Complete backend with search, sort, and filter capabilities
 - **Database**: PostgreSQL with Prisma ORM
 - **UI**: Professional interface with shadcn/ui components
 
 ### 🎯 Next Priority
 
-**Deal Pipeline Management** - Interactive Kanban board for sales opportunities
+**Advanced Activity Tracking** - Enhanced activity logging and scheduling interface
 
 ## 🚀 Getting Started
 
@@ -169,6 +172,7 @@ cd apps/web && npm run dev          # Web only (port 3000)
 # Web application: http://localhost:3000
 # Companies CRUD: http://localhost:3000/companies
 # Contacts CRUD: http://localhost:3000/contacts
+# Money Maker Pipeline: http://localhost:3000/deals
 
 # Test API health
 curl http://localhost:4000/health
@@ -235,6 +239,20 @@ GET    /api/contacts/search/query?q=term  # Search contacts
 ### Deals
 
 ```bash
+GET    /api/deals               # List deals (with filters)
+GET    /api/deals/pipeline      # Get pipeline view (grouped by stage)
+GET    /api/deals/:id           # Get deal with relationships
+POST   /api/deals               # Create deal
+PATCH  /api/deals/:id           # Update deal
+PATCH  /api/deals/:id/stage     # Move deal to different stage
+PATCH  /api/deals/:id/close     # Close deal (won/lost)
+DELETE /api/deals/:id           # Delete deal
+GET    /api/deals/search/query?q=term  # Search deals
+```
+
+### Deals
+
+```bash
 GET    /api/deals               # List deals
 GET    /api/deals/pipeline      # Get pipeline view
 GET    /api/deals/:id           # Get deal
@@ -272,7 +290,70 @@ GET /api/users/me    # Get current user
 GET /api/users       # List users
 ```
 
-## 🧪 Testing the Contact Management Feature
+## 🧪 Testing Pipeline & Deals Management
+
+### Quick Test Guide
+
+1. **Access the Application**
+
+   ```bash
+   # Navigate to web application
+   http://localhost:3000/deals
+   ```
+
+2. **Test Kanban Board**
+   - View deals organized by pipeline stages
+   - Drag deals between stages to test drag-and-drop
+   - Hover over deal cards to see value, probability, owner info
+   - Notice color-coded stages based on probability
+
+3. **Create a New Deal**
+   - Click "Add Deal" button
+   - Fill in required fields (Name, Value, Stage, Company, Owner)
+   - Associate with company and contact
+   - Set expected close date and probability
+   - Save to see deal appear in the pipeline
+
+4. **Test Pipeline Analytics**
+   - View the analytics cards at the top:
+     - Total Deals count
+     - Pipeline Value (total and weighted)
+     - Average Deal Size
+     - Win Rate conversion
+   - Note how values update as deals move between stages
+
+5. **Test Deal Movement**
+   - Drag a deal from "Lead" to "Qualified" stage
+   - Observe probability auto-update based on stage
+   - Try moving deal to different stages
+   - Test the search functionality
+
+6. **View Deal Details**
+   - Click on any deal to navigate to detail page
+   - Explore tabs: Overview, Activities, Notes
+   - Test "Edit Deal" functionality
+   - Try marking deal as "Won" or "Lost"
+
+7. **Test Deal Close Process**
+   - Open a deal and click "Mark Won"
+   - Notice deal moves to closed state
+   - Try "Mark Lost" with a reason
+   - Verify pipeline analytics update
+
+8. **Test API Endpoints**
+
+   ```bash
+   # Get pipeline view
+   curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:4000/api/deals/pipeline
+
+   # List deals
+   curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:4000/api/deals
+
+   # Search deals
+   curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:4000/api/deals/search/query?q=software"
+   ```
+
+## 🧪 Automated Testing the Contact Management Feature
 
 ### Quick Test Guide
 
@@ -371,7 +452,7 @@ User (N) ──> (1) Team
 
 ## 🎯 Recent Updates
 
-### ✅ January 24, 2026 - Contact Management UI Complete
+### ✅ January 24, 2026 - Money Maker Deals Pipeline Complete
 
 - **New Feature**: Full Contact Management CRUD interface
 - **Contact List**: Advanced data table with search, sorting, and pagination
@@ -420,13 +501,17 @@ User (N) ──> (1) Team
 - [ ] Deal pipeline with Kanban board
 - [ ] Activity tracking interface
 
-### 📋 Phase 5: Deal Pipeline & Activity Tracking (In Progress)
+### ✅ Phase 5: Money Maker Pipeline (Complete)
 
-- [ ] Deal pipeline with Kanban board
-- [ ] Activity tracking interface
-- [ ] Deal stage management
-- [ ] Activity logging and scheduling
-- [ ] Deal-Contact-Activity relationships
+- [x] Deal pipeline with Kanban board and drag-and-drop
+- [x] Deal value tracking and analytics with weighted calculations
+- [x] Deal stage management (Lead → Qualified → Proposal → Negotiation → Won/Lost)
+- [x] Deal detail page with activities timeline
+- [x] Deal-Contact-Company relationships
+- [x] Real-time pipeline analytics and conversion metrics
+- [x] Interactive deal cards with probability and value tracking
+- [x] Mobile-responsive Kanban interface
+- [ ] Advanced activity tracking interface (next)
 
 ### 📋 Phase 6: Analytics Dashboard (Planned)
 

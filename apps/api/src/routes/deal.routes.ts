@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { prisma } from '@crm/database';
-import { createDealSchema, updateDealSchema, moveDealStageSchema, closeDealSchema } from '@crm/types';
+import {
+  createDealSchema,
+  updateDealSchema,
+  moveDealStageSchema,
+  closeDealSchema,
+} from '@crm/types';
 import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
 
@@ -281,6 +286,63 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
     });
 
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/deals/search/query?q=term - Search deals
+router.get('/search/query', async (req: AuthRequest, res, next) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return res.json([]);
+    }
+
+    const deals = await prisma.deal.findMany({
+      where: {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { company: { name: { contains: q, mode: 'insensitive' } } },
+          {
+            contact: {
+              OR: [
+                { firstName: { contains: q, mode: 'insensitive' } },
+                { lastName: { contains: q, mode: 'insensitive' } },
+                { email: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+          },
+        ],
+      },
+      take: 10,
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        contact: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        stage: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(deals);
   } catch (error) {
     next(error);
   }
