@@ -152,6 +152,33 @@ export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 
 // ============================================
+// ACTIVITY SCHEMAS
+// ============================================
+
+export const activitySchema = z.object({
+  type: z.enum(['EMAIL', 'CALL', 'MEETING', 'TASK', 'NOTE', 'SMS']),
+  subject: z.string().min(1, 'Subject is required'),
+  description: z.string().optional(),
+  duration: z.number().optional(),
+  scheduledAt: z.string().datetime().optional(),
+  completedAt: z.string().datetime().optional(),
+  emailFrom: z.string().email().optional(),
+  emailTo: z.array(z.string()).optional(),
+  emailCc: z.array(z.string()).optional(),
+  emailSubject: z.string().optional(),
+  emailBody: z.string().optional(),
+  emailThreadId: z.string().optional(),
+  dealId: z.string().optional(),
+  contactId: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const updateActivitySchema = activitySchema.partial();
+
+export type CreateActivityInput = z.infer<typeof activitySchema>;
+export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
+
+// ============================================
 // USER SCHEMAS
 // ============================================
 

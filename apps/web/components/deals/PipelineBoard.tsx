@@ -15,8 +15,9 @@ import { usePipeline, useMoveDealStage } from '@/lib/api/deals.api';
 import { DealCard } from './DealCard';
 import { StageColumn } from './StageColumn';
 import { PipelineAnalytics } from './PipelineAnalytics';
+import { ActivityFeed } from '../activities/ActivityFeed';
 import { Button } from '@/components/ui/button';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, Activity } from 'lucide-react';
 import { DealForm } from './DealForm';
 import { Loading } from '@crm/ui';
 
@@ -128,6 +129,46 @@ export function PipelineBoard() {
 
       {/* Pipeline Analytics */}
       <PipelineAnalytics stages={pipelineData} />
+
+      {/* Recent Activity Feed */}
+      <div className="mt-6">
+        <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+          <Activity className="h-5 w-5" />
+          Recent Activities
+        </h3>
+
+        {/* Collect recent activities from all deals */}
+        {(() => {
+          const allActivities =
+            pipelineData?.flatMap(
+              (stage) => stage.deals?.flatMap((deal) => deal.activities || []) || []
+            ) || [];
+
+          // Get unique activities and sort by date
+          const uniqueActivities = allActivities
+            .filter(
+              (activity, index, self) =>
+                index === allActivities.findIndex((a) => a.id === activity.id)
+            )
+            .sort(
+              (a, b) =>
+                new Date(b.completedAt || b.createdAt).getTime() -
+                new Date(a.completedAt || a.createdAt).getTime()
+            )
+            .reverse()
+            .slice(0, 10); // Show last 10 activities
+
+          return (
+            <ActivityFeed
+              activities={uniqueActivities}
+              onCreateActivity={(type, dealId, contactId) => {
+                // Create activity with optional deal association
+                console.log(`Creating ${type} activity for deal: ${dealId}`);
+              }}
+            />
+          );
+        })()}
+      </div>
 
       {/* Kanban Board */}
       <div className="overflow-x-auto">

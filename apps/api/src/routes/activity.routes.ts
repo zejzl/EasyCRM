@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '@crm/database';
-import { createActivitySchema, updateActivitySchema } from '@crm/types';
+import { activitySchema, updateActivitySchema } from '@crm/types';
 import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
 
@@ -9,14 +9,31 @@ const router = Router();
 // GET /api/activities - List activities
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { page = 1, limit = 50, type, companyId, contactId, dealId } = req.query;
+    const { page = 1, limit = 20, type, dealId, contactId, dateFrom, dateTo } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
+    // Build where clause
     const where: any = {};
+    
     if (type) where.type = type;
-    if (companyId) where.companyId = companyId;
-    if (contactId) where.contactId = contactId;
     if (dealId) where.dealId = dealId;
+    if (contactId) where.contactId = contactId;
+    
+    // Date filtering
+    if (dateFrom && dateTo) {
+      where.createdAt = {
+        gte: new Date(dateFrom as string),
+        lte: new Date(dateTo as string),
+      };
+    } else if (dateFrom) {
+      where.createdAt = {
+        gte: new Date(dateFrom as string),
+      };
+    } else if (dateTo) {
+      where.createdAt = {
+        lte: new Date(dateTo as string),
+      };
+    }
 
     const [activities, total] = await Promise.all([
       prisma.activity.findMany({
@@ -28,29 +45,28 @@ router.get('/', async (req: AuthRequest, res, next) => {
             select: {
               id: true,
               name: true,
-              email: true,
-            },
-          },
-          company: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          contact: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
             },
           },
           deal: {
             select: {
               id: true,
               name: true,
+              company: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
+        contact: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
         },
+      },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.activity.count({ where }),
@@ -80,12 +96,27 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
-        company: true,
-        contact: true,
-        deal: true,
+        deal: {
+          select: {
+            id: true,
+            name: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        contact: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
     });
 
@@ -102,24 +133,40 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
 // POST /api/activities - Create activity
 router.post('/', async (req: AuthRequest, res, next) => {
   try {
-    const data = createActivitySchema.parse(req.body);
-
-    if (!req.user) {
-      throw new AppError(401, 'Unauthorized');
-    }
+    const data = activitySchema.parse(req.body);
 
     const activity = await prisma.activity.create({
       data: {
         ...data,
+        createdById: req.user?.id,
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
         completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
-        createdById: req.user.id,
+        emailFrom: data.emailFrom || req.user?.email,
       },
       include: {
         createdBy: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        deal: {
+          select: {
+            id: true,
+            name: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        contact: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -150,6 +197,25 @@ router.patch('/:id', async (req: AuthRequest, res, next) => {
             name: true,
           },
         },
+        deal: {
+          select: {
+            id: true,
+            name: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        contact: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
     });
 
@@ -167,6 +233,70 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
     });
 
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/activities/search/query?q=term - Search activities
+router.get('/search/query', async (req: AuthRequest, res, next) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || typeof q !== 'string') {
+      return res.json([]);
+    }
+
+    const activities = await prisma.activity.findMany({
+      where: {
+        OR: [
+          { subject: { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+          { type: { contains: q, mode: 'insensitive' } },
+          { createdBy: { name: { contains: q, mode: 'insensitive' } },
+          { deal: { name: { contains: q, mode: 'insensitive' } },
+          { deal: { company: { name: { contains: q, mode: 'insensitive' } },
+          { contact: { 
+            OR: [
+              { firstName: { contains: q, mode: 'insensitive' } },
+              { lastName: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } },
+            ],
+          } },
+        ],
+      },
+      take: 10,
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        deal: {
+          select: {
+            id: true,
+            name: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        contact: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(activities);
   } catch (error) {
     next(error);
   }

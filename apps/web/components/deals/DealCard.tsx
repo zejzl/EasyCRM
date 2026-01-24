@@ -5,7 +5,16 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, DollarSign, TrendingUp, MoreHorizontal, User, Building2 } from 'lucide-react';
+import {
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  MoreHorizontal,
+  User,
+  Building2,
+  Phone,
+  Plus,
+} from 'lucide-react';
 import { format } from 'date-fns';
 
 interface DealCardProps {
@@ -63,9 +72,22 @@ export function DealCard({ deal }: DealCardProps) {
                 </div>
               )}
             </div>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-              <MoreHorizontal className="h-3 w-3" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => {
+                  // Quick activity creation - log a call for this deal
+                  console.log(`Logging call for deal: ${deal.id}`);
+                }}
+              >
+                <Phone className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                <MoreHorizontal className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0">

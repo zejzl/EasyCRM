@@ -93,6 +93,21 @@ router.get('/pipeline', async (req: AuthRequest, res, next) => {
                 name: true,
               },
             },
+            activities: {
+              where: {
+                completedAt: { not: null },
+              },
+              include: {
+                createdBy: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 3,
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
