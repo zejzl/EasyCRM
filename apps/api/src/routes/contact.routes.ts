@@ -9,10 +9,31 @@ const router = Router();
 // GET /api/contacts - List contacts
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { page = 1, limit = 20, companyId } = req.query;
+    const { page = 1, limit = 20, companyId, search, sortBy, sortOrder } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    const where = companyId ? { companyId: String(companyId) } : {};
+    // Build where clause
+    let where: any = {};
+
+    if (companyId) {
+      where.companyId = String(companyId);
+    }
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: String(search), mode: 'insensitive' } },
+        { lastName: { contains: String(search), mode: 'insensitive' } },
+        { email: { contains: String(search), mode: 'insensitive' } },
+        { title: { contains: String(search), mode: 'insensitive' } },
+        { company: { name: { contains: String(search), mode: 'insensitive' } } },
+      ];
+    }
+
+    // Build order by clause
+    let orderBy: any = { createdAt: 'desc' };
+    if (sortBy && sortOrder) {
+      orderBy = { [String(sortBy)]: String(sortOrder) };
+    }
 
     const [contacts, total] = await Promise.all([
       prisma.contact.findMany({
@@ -28,7 +49,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
       prisma.contact.count({ where }),
     ]);
@@ -145,6 +166,44 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
     });
 
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/contacts/search/query?q=term - Search contacts
+router.get('/search/query', async (req: AuthRequest, res, next) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return res.json([]);
+    }
+
+    const contacts = await prisma.contact.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+          { title: { contains: q, mode: 'insensitive' } },
+          { company: { name: { contains: q, mode: 'insensitive' } } },
+        ],
+      },
+      take: 10,
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            domain: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(contacts);
   } catch (error) {
     next(error);
   }
