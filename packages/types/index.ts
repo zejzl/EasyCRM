@@ -178,6 +178,9 @@ export const updateActivitySchema = activitySchema.partial();
 export type CreateActivityInput = z.infer<typeof activitySchema>;
 export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
 
+export type CreateActivityInput = z.infer<typeof activitySchema>;
+export type UpdateActivityInput = z.infer<typeof updateActivitySchema>;
+
 // ============================================
 // USER SCHEMAS
 // ============================================
