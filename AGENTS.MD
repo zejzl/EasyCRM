@@ -2,6 +2,16 @@
 
 This document outlines the specialized agents and tools available for EasyCRM development, organized by their capabilities and use cases.
 
+## ⚠️ CRITICAL CODING STANDARD
+
+**NO EMOJIS IN SOURCE CODE** - This is a **mandatory** rule for all agents working on this project.
+
+Emoji characters (🚀, ✅, ❌, 💡, 🔧, 💼, 📊, etc.) are **strictly prohibited** in all source code files (.ts, .tsx, .js, .jsx, .py, etc.) due to terminal encoding issues and professional coding standards.
+
+**Use text indicators instead:** `[OK]`, `[ERROR]`, `[INFO]`, `[SUCCESS]`, `[START]`, `[DATA]`, etc.
+
+Emojis are allowed in documentation (`.md` files) only. All agents must review code before committing to ensure compliance.
+
 ## Available Agent Types
 
 ### 1. General Agent (`general`)

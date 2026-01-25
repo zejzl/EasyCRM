@@ -1,5 +1,28 @@
 # GROK.MD - EasyCRM Project Context
 
+## ⚠️ MANDATORY CODING RULE FOR GROK AGENTS
+
+**ZERO TOLERANCE: NO EMOJIS IN SOURCE CODE**
+
+This is a **non-negotiable coding standard** that all Grok agents must follow when working on this repository:
+
+🚫 **FORBIDDEN in source code files (.ts, .tsx, .js, .jsx, .py):**
+- Emoji characters: 🚀, ✅, ❌, 💡, 🔧, 💼, 📊, 📈, etc.
+- Unicode decorative characters
+
+✅ **REQUIRED instead:**
+- Text indicators: `[OK]`, `[ERROR]`, `[INFO]`, `[SUCCESS]`, `[START]`, `[DATA]`, `[BUSINESS]`
+
+**Rationale:**
+- Terminal encoding compatibility
+- Professional coding standards
+- Accessibility requirements
+- Cross-platform consistency
+
+✅ **Emojis allowed ONLY in `.md` documentation files** (like this one)
+
+All Grok agents must audit their code changes before committing to ensure zero emoji usage in source files.
+
 ## Overview
 EasyCRM is a modern B2B Customer Relationship Management system built as a monorepo using Turborepo. The project implements a full-stack CRM solution with a focus on sales team productivity and customer relationship management.
 

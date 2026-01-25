@@ -78,13 +78,13 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 API Server running on port ${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`[START] API Server running on port ${PORT}`);
+  console.log(`[INFO] Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`[INFO] Health check: http://localhost:${PORT}/health`);
 });
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (err: Error) => {
-  console.error('❌ Unhandled Rejection:', err);
+  console.error('[ERROR] Unhandled Rejection:', err);
   process.exit(1);
 });

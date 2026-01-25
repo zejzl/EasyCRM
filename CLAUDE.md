@@ -2,6 +2,38 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Coding Standards
+
+**CRITICAL: NO EMOJIS IN SOURCE CODE**
+
+Emoji characters are **strictly prohibited** in all source code files (.ts, .tsx, .js, .jsx, .py, etc.). This is a mandatory coding standard for this project.
+
+**Why:**
+- Terminal/console encoding issues on Windows systems
+- Causes rendering problems in various development environments
+- Not professional or maintainable code
+- Breaks accessibility and screen readers
+- Inconsistent display across different systems
+
+**Rules:**
+- ✅ Use text indicators: `[OK]`, `[ERROR]`, `[INFO]`, `[SUCCESS]`, `[WARNING]`, etc.
+- ❌ Never use emoji characters in source code: 🚀, ✅, ❌, 💡, 🔧, etc.
+- ✅ Emojis are allowed in documentation files (`.md` files only)
+- ✅ Review all code before committing to ensure compliance
+
+**Example:**
+```typescript
+// BAD - Will cause issues
+console.log("✅ Success!");
+console.log("🚀 Server started...");
+
+// GOOD - Professional and compatible
+console.log("[SUCCESS] Success!");
+console.log("[START] Server started...");
+```
+
+All developers and AI agents must strictly follow this rule when modifying code.
+
 ## Project Overview
 
 This is a B2B CRM system built as a monorepo using Turborepo. The project has Phase 1-4 complete with analytics dashboard planned.

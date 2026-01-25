@@ -4,7 +4,7 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting database seed...');
+  console.log('[START] Starting database seed...');
 
   // Create default pipeline stages
   const stages = [
@@ -216,7 +216,7 @@ Best regards,
     },
   });
 
-  console.log('✅ Database seeded successfully!');
+  console.log('[SUCCESS] Database seeded successfully!');
   console.log('\nDefault credentials:');
   console.log('Admin: admin@crm.local / admin123');
   console.log('Sales Rep: sales@crm.local / sales123');
@@ -224,7 +224,7 @@ Best regards,
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding database:', e);
+    console.error('[ERROR] Error seeding database:', e);
     process.exit(1);
   })
   .finally(async () => {
