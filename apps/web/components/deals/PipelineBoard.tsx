@@ -141,17 +141,17 @@ export function PipelineBoard() {
         {(() => {
           const allActivities =
             pipelineData?.flatMap(
-              (stage) => stage.deals?.flatMap((deal) => deal.activities || []) || []
+              (stage: any) => stage.deals?.flatMap((deal: any) => deal.activities || []) || []
             ) || [];
 
           // Get unique activities and sort by date
           const uniqueActivities = allActivities
             .filter(
-              (activity, index, self) =>
-                index === allActivities.findIndex((a) => a.id === activity.id)
+              (activity: any, index: number, self: any[]) =>
+                index === allActivities.findIndex((a: any) => a.id === activity.id)
             )
             .sort(
-              (a, b) =>
+              (a: any, b: any) =>
                 new Date(b.completedAt || b.createdAt).getTime() -
                 new Date(a.completedAt || a.createdAt).getTime()
             )

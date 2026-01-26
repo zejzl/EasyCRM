@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { prisma } from '@crm/database';
-import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
 import { Decimal } from '@prisma/client/runtime/library';
+import { Activity, Deal, User } from '@crm/types';
 
 const router = Router();
 
 // Helper functions for analytics calculations
-const calculateMetrics = (deals: any[], activities: any[]) => {
+const calculateMetrics = (deals: Deal[], activities: Activity[]) => {
   const totalDeals = deals.length;
   const totalValue = deals.reduce((sum: Decimal, deal) => sum.add(deal.value ? new Decimal(deal.value || '0') : new Decimal('0')), new Decimal('0'));
   const openDeals = deals.filter(deal => deal.status === 'OPEN');
@@ -33,9 +33,8 @@ const calculateMetrics = (deals: any[], activities: any[]) => {
     conversionRate: totalDeals > 0 ? (wonDeals.length / totalDeals) * 100 : 0,
   };
 };
-};
 
-const calculateTeamMetrics = (users: any[], activities: any[]) => {
+const calculateTeamMetrics = (users: User[], activities: Activity[]) => {
   const activitiesByUser = users.map((user) => {
     const userActivities = activities.filter((activity) => activity.createdById === user.id);
     return {
@@ -59,26 +58,6 @@ const calculateTeamMetrics = (users: any[], activities: any[]) => {
       completedActivities: topPerformer.completedActivities,
       averageActivitiesPerDay: topPerformer.averageActivitiesPerDay,
     } : null,
-  };
-};
-  });
-
-  const topPerformer = activitiesByUser
-    .sort((a, b) => b.completedActivities - a.completedActivities)
-    .slice(0, 1)[0];
-
-  return {
-    totalUsers: users.length,
-    teamMetrics: activitiesByUser,
-    topPerformer: topPerformer
-      ? {
-          userId: topPerformer.userId,
-          userName: topPerformer.userName,
-          totalActivities: topPerformer.totalActivities,
-          completedActivities: topPerformer.completedActivities,
-          averageActivitiesPerDay: topPerformer.averageActivitiesPerDay,
-        }
-      : null,
   };
 };
 
@@ -137,15 +116,15 @@ router.get('/overview', async (req: AuthRequest, res, next) => {
       }),
     ]);
 
-    const dealMetrics = calculateMetrics(deals, activities);
-    const teamMetrics = calculateTeamMetrics(users, activities);
+    const dealMetrics = calculateMetrics(deals as any, activities as any);
+    const teamMetrics = calculateTeamMetrics(users as any, activities as any);
 
     res.json({
       overview: {
         deals: dealMetrics,
         activities: {
           total: activities.length,
-          completed: activities.filter((a) => a.completedAt).length,
+          completed: activities.filter((a: any) => a.completedAt).length,
         },
         team: teamMetrics,
       },
@@ -194,9 +173,9 @@ router.get('/pipeline', async (req: AuthRequest, res, next) => {
       orderBy: { order: 'asc' },
     });
 
-    const pipelineAnalytics = stages.map((stage) => {
-      const stageDeals = deals.filter((deal) => deal.stageId === stage.id);
-      const stageValue = stageDeals.reduce((sum: number, deal) => sum + (deal.value || 0), 0);
+    const pipelineAnalytics = stages.map((stage: any) => {
+      const stageDeals = deals.filter((deal: any) => deal.stageId === stage.id);
+      const stageValue = stageDeals.reduce((sum: number, deal: any) => sum + (Number(deal.value) || 0), 0);
       const stageCount = stageDeals.length;
       const avgDealSize = stageCount > 0 ? stageValue / stageCount : 0;
 
@@ -250,13 +229,13 @@ router.get('/sales-by-user', async (req: AuthRequest, res, next) => {
       }),
     ]);
 
-    const userMetrics = users.map((user) => {
-      const userDeals = deals.filter((deal) => deal.ownerId === user.id);
+    const userMetrics = users.map((user: any) => {
+      const userDeals = deals.filter((deal: any) => deal.ownerId === user.id);
       const totalValue = userDeals.reduce(
-        (sum: number, deal) => sum + parseFloat(deal.value || '0') || 0,
+        (sum: number, deal: any) => sum + (Number(deal.value) || 0),
         0
       );
-      const wonDeals = userDeals.filter((deal) => deal.status === 'WON');
+      const wonDeals = userDeals.filter((deal: any) => deal.status === 'WON');
       const avgDealSize = userDeals.length > 0 ? totalValue / userDeals.length : 0;
       const winRate = userDeals.length > 0 ? (wonDeals.length / userDeals.length) * 100 : 0;
 
@@ -308,13 +287,13 @@ router.get('/revenue-forecast', async (req: AuthRequest, res, next) => {
     const totalHistoricalDeals = historicalDeals.length;
     const avgDealSize =
       totalHistoricalDeals > 0
-        ? historicalDeals.reduce((sum: number, deal) => sum + (deal.value || 0), 0) /
+        ? historicalDeals.reduce((sum: number, deal: any) => sum + (Number(deal.value) || 0), 0) /
           totalHistoricalDeals
         : 0;
 
     // Calculate monthly win patterns
     const monthlyWins = new Array(12).fill(0);
-    historicalDeals.forEach((deal) => {
+    historicalDeals.forEach((deal: any) => {
       if (deal.actualCloseDate) {
         const month = deal.actualCloseDate.getMonth();
         monthlyWins[month] = (monthlyWins[month] || 0) + 1;
@@ -332,7 +311,7 @@ router.get('/revenue-forecast', async (req: AuthRequest, res, next) => {
     });
 
     const totalPipelineValue = currentPipelineDeals.reduce(
-      (sum: number, deal) => sum + (deal.value || 0),
+      (sum: number, deal: any) => sum + (Number(deal.value) || 0),
       0
     );
     const forecastMultiplier = 0.2; // Assuming 20% close rate
@@ -345,7 +324,7 @@ router.get('/revenue-forecast', async (req: AuthRequest, res, next) => {
         totalDeals: totalHistoricalDeals,
       },
       forecast: {
-        currentPipelineValue,
+        currentPipelineValue: totalPipelineValue,
         projectedRevenue,
         confidence: 0.7, // Based on historical patterns
         months: parseInt(months as string),
