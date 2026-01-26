@@ -13,7 +13,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     // Build where clause
-    let where: any = {};
+    const where: any = {};
 
     if (companyId) {
       where.companyId = String(companyId);

@@ -6,7 +6,7 @@
 API_URL="http://localhost:4000"
 TOKEN=""
 
-echo "🧪 Testing B2B CRM API"
+echo "[INFO] Testing B2B CRM API"
 echo ""
 
 # Test 1: Health Check
@@ -82,9 +82,9 @@ if [ -n "$COMPANY_ID" ] && [ "$COMPANY_ID" != "null" ]; then
   echo ""
 fi
 
-echo "✅ API tests complete!"
+echo "[SUCCESS] API tests complete!"
 echo ""
-echo "💡 Tips:"
+echo "[INFO] Tips:"
 echo "  - Use 'jq' for better JSON formatting (install with: apt-get install jq)"
 echo "  - Check the API logs for detailed request information"
 echo "  - Open Prisma Studio to visualize the database: npm run db:studio"

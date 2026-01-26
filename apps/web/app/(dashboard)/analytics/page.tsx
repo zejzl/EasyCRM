@@ -119,7 +119,6 @@ export default function AnalyticsPage() {
           <TrendingUp className="mr-2 h-4 w-4" />
           Export Report
         </Button>
-        </div>
       </div>
 
       {/* Key Metrics Cards */}
@@ -189,7 +188,6 @@ export default function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
       )}
 
       {/* Pipeline Analytics */}
@@ -201,31 +199,30 @@ export default function AnalyticsPage() {
           </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pipelineData.stages?.map((stage) => (
-                  <div key={stage.stageId} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{stage.stageName}</h4>
-                      <span className="text-sm text-muted-foreground">{stage.dealCount} deals</span>
-                    <span className="text-sm text-muted-foreground">
-                        {stage.averageDealSize ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stage.averageDealSize)} : '0'} avg
-                      </span>
+                {pipelineData.stages && pipelineData.stages.length > 0 ? (
+                  pipelineData.stages.map((stage: any) => (
+                    <div key={stage.stageId} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">{stage.stageName}</h4>
+                        <span className="text-sm text-muted-foreground">{stage.dealCount} deals</span>
+                        <span className="text-sm text-muted-foreground">
+                          {stage.averageDealSize ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stage.averageDealSize) : '0'} avg
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{ width: `${stage.probability}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${stage.probability}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              : (
-                <p className="text-center text-muted-foreground py-8">No pipeline data available</p>
-              )}
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No pipeline data available</p>
+                )}
               </div>
             </CardContent>
           </Card>
-        </div>
       )}
     </div>
   );

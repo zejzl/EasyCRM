@@ -215,8 +215,8 @@ export default function ContactsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Contact</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{contactToDelete?.firstName}{' '}
-              {contactToDelete?.lastName}"? This action cannot be undone. All associated activities
+              Are you sure you want to delete &quot;{contactToDelete?.firstName}{' '}
+              {contactToDelete?.lastName}&quot;? This action cannot be undone. All associated activities
               and notes will also be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>

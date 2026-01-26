@@ -136,7 +136,7 @@ export default function ActivitiesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All deals</SelectItem>
-                  {deals.map((deal) => (
+                  {deals.map((deal: any) => (
                     <SelectItem key={deal.id} value={deal.id}>
                       {deal.name}
                     </SelectItem>

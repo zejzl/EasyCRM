@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { Prisma } from '@crm/database';
+import { Prisma } from '@prisma/client';
 
 export class AppError extends Error {
   constructor(
@@ -17,7 +17,7 @@ export const errorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   console.error('Error:', err);
 
@@ -34,18 +34,19 @@ export const errorHandler = (
   }
 
   // Prisma errors
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+  if (err instanceof (Prisma as any).PrismaClientKnownRequestError) {
+    const prismaErr = err as any;
     // Unique constraint violation
-    if (err.code === 'P2002') {
+    if (prismaErr.code === 'P2002') {
       res.status(409).json({
         error: 'A record with this value already exists',
-        field: (err.meta?.target as string[])?.join(', '),
+        field: (prismaErr.meta?.target as string[])?.join(', '),
       });
       return;
     }
 
     // Record not found
-    if (err.code === 'P2025') {
+    if (prismaErr.code === 'P2025') {
       res.status(404).json({ error: 'Record not found' });
       return;
     }

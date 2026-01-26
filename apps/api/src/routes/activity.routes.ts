@@ -253,9 +253,9 @@ router.get('/search/query', async (req: AuthRequest, res, next) => {
           { subject: { contains: q, mode: 'insensitive' } },
           { description: { contains: q, mode: 'insensitive' } },
           { type: { contains: q, mode: 'insensitive' } },
-          { createdBy: { name: { contains: q, mode: 'insensitive' } },
-          { deal: { name: { contains: q, mode: 'insensitive' } },
-          { deal: { company: { name: { contains: q, mode: 'insensitive' } },
+          { createdBy: { name: { contains: q, mode: 'insensitive' } } },
+          { deal: { name: { contains: q, mode: 'insensitive' } } },
+          { deal: { company: { name: { contains: q, mode: 'insensitive' } } } },
           { contact: { 
             OR: [
               { firstName: { contains: q, mode: 'insensitive' } },

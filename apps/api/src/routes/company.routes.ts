@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '@crm/database';
-import { createCompanySchema, updateCompanySchema, paginationSchema } from '@crm/types';
+import { createCompanySchema, updateCompanySchema } from '@crm/types';
 import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
 
