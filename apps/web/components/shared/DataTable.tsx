@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -21,8 +21,13 @@ import {
   ArrowDown,
   Search,
   Loader2,
+  X,
+  SearchX,
+  Plus,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getColumnValue, resultRange } from '@/lib/utils/table';
 
 export interface Column<T> {
   key: keyof T | string;
@@ -46,8 +51,12 @@ export interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
   onSearchChange?: (search: string) => void;
+  searchValue?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  onRetry?: () => void;
+  onCreate?: () => void;
+  createLabel?: string;
   className?: string;
 }
 
@@ -60,13 +69,22 @@ export function DataTable<T>({
   onPageChange,
   onSortChange,
   onSearchChange,
+  searchValue,
   searchPlaceholder = 'Search...',
   emptyMessage = 'No data found',
+  onRetry,
+  onCreate,
+  createLabel = 'Add a record',
   className,
 }: DataTableProps<T>) {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localSearchQuery, setSearchQuery] = useState('');
+  const searchQuery = searchValue ?? localSearchQuery;
+  const searchInput = useRef<HTMLInputElement>(null);
+  const range = pagination
+    ? resultRange(pagination.page, pagination.limit, pagination.total, data.length)
+    : resultRange(1, data.length, data.length, data.length);
 
   const handleSort = (columnKey: string) => {
     if (!onSortChange) return;
@@ -97,138 +115,216 @@ export function DataTable<T>({
     );
   };
 
-  if (error) {
-    return (
-      <div className="rounded-md border p-8 text-center">
-        <p className="text-sm text-red-600">{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-4 rounded-xl border bg-white p-4 sm:p-5', className)}>
       {/* Search */}
       {onSearchChange && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <div role="search" className="relative max-w-md">
+          <Search
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          />
           <Input
+            ref={searchInput}
+            type="search"
+            aria-label={searchPlaceholder}
             placeholder={searchPlaceholder}
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-10 [&::-webkit-search-cancel-button]:appearance-none"
           />
+          {searchQuery && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Clear search"
+              className="absolute right-1 top-1 h-8 w-8"
+              onClick={() => {
+                handleSearch('');
+                searchInput.current?.focus();
+              }}
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="font-medium text-red-900">Unable to load these records</p>
+            <p className="mt-1 text-sm text-red-700">{error}</p>
+          </div>
+          {onRetry && (
+            <Button variant="outline" onClick={onRetry} disabled={loading}>
+              <RefreshCw aria-hidden="true" className="mr-2 h-4 w-4" />
+              Try again
+            </Button>
+          )}
         </div>
       )}
 
       {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.key as string} className={column.className}>
-                  {column.sortable && onSortChange ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-0 font-medium"
-                      onClick={() => handleSort(column.key as string)}
-                    >
-                      {column.header}
-                      <span className="ml-2">{renderSortIcon(column.key as string)}</span>
-                    </Button>
-                  ) : (
-                    column.header
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
+      {!error && (
+        <div className="overflow-hidden rounded-lg border">
+          <Table aria-busy={loading}>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="ml-2">Loading...</span>
-                  </div>
-                </TableCell>
+                {columns.map((column) => (
+                  <TableHead
+                    key={column.key as string}
+                    className={column.className}
+                    aria-sort={
+                      sortBy === column.key
+                        ? sortOrder === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : undefined
+                    }
+                  >
+                    {column.sortable && onSortChange ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto py-2 px-0 font-medium"
+                        onClick={() => handleSort(column.key as string)}
+                      >
+                        {column.header}
+                        <span className="ml-2">{renderSortIcon(column.key as string)}</span>
+                      </Button>
+                    ) : (
+                      column.header
+                    )}
+                  </TableHead>
+                ))}
               </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  {emptyMessage}
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((item, index) => (
-                <TableRow key={index}>
-                  {columns.map((column) => {
-                    const value = item[column.key as keyof T];
-                    return (
-                      <TableCell key={column.key as string} className={column.className}>
-                        {column.render ? column.render(value, item) : String(value ?? '')}
-                      </TableCell>
-                    );
-                  })}
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <div className="flex items-center justify-center">
+                      <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin" />
+                      <span role="status" className="ml-2">
+                        Loading records...
+                      </span>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-64 text-center">
+                    <div className="mx-auto flex max-w-sm flex-col items-center gap-3 py-8">
+                      <span className="rounded-full bg-slate-100 p-3 text-slate-500">
+                        <SearchX aria-hidden="true" className="h-6 w-6" />
+                      </span>
+                      <p className="font-medium text-slate-900">
+                        {searchQuery.trim() ? 'No matching records' : emptyMessage}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {searchQuery.trim()
+                          ? 'Try a different search or clear it to see all records.'
+                          : 'Keep your relationships in one place. Add a record to get started.'}
+                      </p>
+                      {searchQuery.trim() ? (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            handleSearch('');
+                            searchInput.current?.focus();
+                          }}
+                        >
+                          Clear search
+                        </Button>
+                      ) : (
+                        onCreate && (
+                          <Button onClick={onCreate}>
+                            <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
+                            {createLabel}
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.map((item, index) => (
+                  <TableRow key={String(getColumnValue(item, 'id') ?? index)}>
+                    {columns.map((column) => {
+                      const value = getColumnValue(item, column.key as string);
+                      return (
+                        <TableCell key={column.key as string} className={column.className}>
+                          {column.render ? column.render(value, item) : String(value ?? '')}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Pagination */}
-      {pagination && onPageChange && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}{' '}
-            results
+      {!error && !loading && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
+            {range.total === 0
+              ? '0 results'
+              : `Showing ${range.start}–${range.end} of ${range.total} results`}
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(1)}
-              disabled={pagination.page === 1}
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+          {pagination && onPageChange && pagination.totalPages > 1 && (
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="First page"
+                onClick={() => onPageChange(1)}
+                disabled={pagination.page === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Previous page"
+                onClick={() => onPageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
 
-            <span className="text-sm">
-              Page {pagination.page} of {pagination.totalPages}
-            </span>
+              <span className="text-sm">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(pagination.totalPages)}
-              disabled={pagination.page === pagination.totalPages}
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-          </div>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Next page"
+                onClick={() => onPageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Last page"
+                onClick={() => onPageChange(pagination.totalPages)}
+                disabled={pagination.page === pagination.totalPages}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
