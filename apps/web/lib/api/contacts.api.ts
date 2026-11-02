@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { CreateContactInput, UpdateContactInput } from '@crm/types';
 import apiClient from './client';
@@ -16,6 +16,7 @@ export interface ContactsFilters {
 export const useContacts = (filters: ContactsFilters = {}) => {
   return useQuery({
     queryKey: ['contacts', filters],
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const params = new URLSearchParams();
 

@@ -41,6 +41,7 @@ export interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   loading?: boolean;
+  refreshing?: boolean;
   error?: string | null;
   pagination?: {
     page: number;
@@ -64,6 +65,7 @@ export function DataTable<T>({
   data,
   columns,
   loading = false,
+  refreshing = false,
   error = null,
   pagination,
   onPageChange,
@@ -157,11 +159,16 @@ export function DataTable<T>({
           className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <p className="font-medium text-red-900">Unable to load these records</p>
+            <p className="font-medium text-red-900">
+              {data.length > 0 ? 'Unable to refresh these records' : 'Unable to load these records'}
+            </p>
             <p className="mt-1 text-sm text-red-700">{error}</p>
+            {data.length > 0 && (
+              <p className="mt-1 text-sm text-red-700">Your last loaded records are still shown.</p>
+            )}
           </div>
           {onRetry && (
-            <Button variant="outline" onClick={onRetry} disabled={loading}>
+            <Button variant="outline" onClick={onRetry} disabled={loading || refreshing}>
               <RefreshCw aria-hidden="true" className="mr-2 h-4 w-4" />
               Try again
             </Button>
@@ -169,10 +176,21 @@ export function DataTable<T>({
         </div>
       )}
 
+      {refreshing && !loading && data.length > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+          Refreshing results...
+        </div>
+      )}
+
       {/* Table */}
-      {!error && (
+      {(!error || data.length > 0) && (
         <div className="overflow-hidden rounded-lg border">
-          <Table aria-busy={loading}>
+          <Table aria-busy={loading || refreshing}>
             <TableHeader>
               <TableRow>
                 {columns.map((column) => (
@@ -191,6 +209,7 @@ export function DataTable<T>({
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={loading || refreshing}
                         className="h-auto py-2 px-0 font-medium"
                         onClick={() => handleSort(column.key as string)}
                       >
@@ -205,13 +224,13 @@ export function DataTable<T>({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading || (refreshing && data.length === 0) ? (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
                     <div className="flex items-center justify-center">
                       <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin" />
                       <span role="status" className="ml-2">
-                        Loading records...
+                        {loading ? 'Loading records...' : 'Updating results...'}
                       </span>
                     </div>
                   </TableCell>
@@ -275,9 +294,11 @@ export function DataTable<T>({
       {!error && !loading && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
-            {range.total === 0
-              ? '0 results'
-              : `Showing ${range.start}–${range.end} of ${range.total} results`}
+            {refreshing
+              ? 'Updating result count...'
+              : range.total === 0
+                ? '0 results'
+                : `Showing ${range.start}–${range.end} of ${range.total} results`}
           </div>
 
           {pagination && onPageChange && pagination.totalPages > 1 && (
@@ -287,7 +308,7 @@ export function DataTable<T>({
                 size="sm"
                 aria-label="First page"
                 onClick={() => onPageChange(1)}
-                disabled={pagination.page === 1}
+                disabled={refreshing || pagination.page === 1}
               >
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
@@ -296,7 +317,7 @@ export function DataTable<T>({
                 size="sm"
                 aria-label="Previous page"
                 onClick={() => onPageChange(pagination.page - 1)}
-                disabled={pagination.page === 1}
+                disabled={refreshing || pagination.page === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -310,7 +331,7 @@ export function DataTable<T>({
                 size="sm"
                 aria-label="Next page"
                 onClick={() => onPageChange(pagination.page + 1)}
-                disabled={pagination.page === pagination.totalPages}
+                disabled={refreshing || pagination.page === pagination.totalPages}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -319,7 +340,7 @@ export function DataTable<T>({
                 size="sm"
                 aria-label="Last page"
                 onClick={() => onPageChange(pagination.totalPages)}
-                disabled={pagination.page === pagination.totalPages}
+                disabled={refreshing || pagination.page === pagination.totalPages}
               >
                 <ChevronsRight className="h-4 w-4" />
               </Button>

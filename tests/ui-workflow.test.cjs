@@ -72,6 +72,24 @@ const render = (props = {}) =>
     })
   );
 
+for (const [name, hook] of [
+  ['companies', 'useCompanies'],
+  ['contacts', 'useContacts'],
+]) {
+  test(`${name}: list query retains the prior response while its key changes`, () => {
+    const keepPreviousData = (previous) => previous;
+    const api = compile(`lib/api/${name}.api.ts`, {
+      '@tanstack/react-query': { keepPreviousData, useQuery: (options) => options },
+      'next/navigation': {},
+      './client': {},
+    });
+    const options = api[hook]({ page: 2, search: 'Acme' });
+    assert.equal(options.placeholderData, keepPreviousData);
+    const previous = { data: [{ id: 'a' }] };
+    assert.equal(options.placeholderData(previous), previous);
+  });
+}
+
 test('nested CRM counts display actual values, including zero', () => {
   assert.match(
     render({ data: [{ id: 'a', name: 'Acme', _count: { contacts: 7 } }] }),
@@ -119,6 +137,44 @@ test('loading is announced without presenting a false empty state', () => {
   assert.doesNotMatch(html, /No data found|0 results/);
 });
 
+test('background refreshing keeps loaded rows instead of the initial spinner', () => {
+  const html = render({
+    refreshing: true,
+    data: [{ id: 'a', name: 'Acme', _count: { contacts: 7 } }],
+  });
+  assert.match(html, /Acme/);
+  assert.match(html, /<td[^>]*>7<\/td>/);
+  assert.match(html, /Refreshing results/);
+  assert.match(html, /aria-busy="true"/);
+  assert.doesNotMatch(html, /Loading records/);
+});
+
+test('refreshing an empty placeholder never reports a completed empty search', () => {
+  const html = render({ refreshing: true, searchValue: 'New query' });
+  assert.match(html, /Updating results/);
+  assert.doesNotMatch(html, /No matching records|0 results/);
+});
+
+test('a failed background refresh preserves the last loaded rows', () => {
+  const html = render({ error: 'Offline', onRetry() {}, data: [{ id: 'a', name: 'Acme' }] });
+  assert.match(html, /Unable to refresh/);
+  assert.match(html, /last loaded records are still shown/);
+  assert.match(html, /Acme/);
+  assert.match(html, /Try again/);
+});
+
+test('refreshing disables stale pagination while preserving the table', () => {
+  const html = render({
+    refreshing: true,
+    data: [{ id: 'a', name: 'Acme' }],
+    onPageChange() {},
+    pagination: { page: 1, limit: 20, total: 40, totalPages: 2 },
+  });
+  assert.match(html, /Acme/);
+  assert.match(html, /aria-label="Next page"[^>]*disabled/);
+  assert.match(html, /Updating result count/);
+});
+
 test('single-page totals remain visible', () => {
   const html = render({
     data: [{ id: 'a', name: 'Acme' }],
@@ -152,7 +208,7 @@ for (const [kind, plural] of [
   ['Company', 'companies'],
   ['Contact', 'contacts'],
 ]) {
-  function pageHarness(failDelete) {
+  function pageHarness(failDelete, queryState = {}) {
     let slots = [],
       cursor = 0,
       calls = 0;
@@ -165,7 +221,13 @@ for (const [kind, plural] of [
       },
     };
     const record = { id: 'a', name: 'Acme', firstName: 'Ada', lastName: 'Lovelace' };
-    const query = { data: { data: [record] }, isLoading: false, isFetching: false, refetch() {} };
+    const query = {
+      data: { data: [record] },
+      isLoading: false,
+      isFetching: false,
+      refetch() {},
+      ...queryState,
+    };
     const dataTable = () => null;
     const form = () => null;
     const alerts = Object.fromEntries(
@@ -237,6 +299,12 @@ for (const [kind, plural] of [
         nodes(tree)
           .filter((node) => node.props.role === 'alert')
           .map((node) => node.props.children),
+      actionButtons: () => {
+        const actions = table()
+          .columns.find((column) => column.key === 'actions')
+          .render(undefined, record);
+        return nodes(actions).filter((node) => node.props['aria-label']);
+      },
     };
   }
 
@@ -268,6 +336,18 @@ for (const [kind, plural] of [
     page.table().onRetry();
     page.renderPage();
     assert.equal(page.table().searchValue, 'Acme');
+  });
+
+  test(`${kind}: background fetching does not enable the initial loading state`, () => {
+    const page = pageHarness(false, { isFetching: true });
+    assert.equal(page.table().loading, false);
+    assert.equal(page.table().refreshing, true);
+  });
+
+  test(`${kind}: placeholder rows cannot be edited or deleted as current results`, () => {
+    const page = pageHarness(false, { isFetching: true, isPlaceholderData: true });
+    assert.equal(page.actionButtons().length, 3);
+    for (const button of page.actionButtons()) assert.equal(button.props.disabled, true);
   });
 
   test(`${kind}: the mounted form resets for another record, not while typing`, () => {

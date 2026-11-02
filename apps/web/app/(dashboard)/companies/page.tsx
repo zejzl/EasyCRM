@@ -37,6 +37,7 @@ export default function CompaniesPage() {
     data: companiesData,
     isLoading,
     isFetching,
+    isPlaceholderData,
     error,
     refetch,
   } = useCompanies({
@@ -113,7 +114,8 @@ export default function CompaniesPage() {
       render: (value, company) => (
         <div>
           <button
-            className="text-left font-medium text-blue-700 hover:underline focus-visible:outline-2"
+            disabled={isPlaceholderData}
+            className="text-left font-medium text-blue-700 hover:underline focus-visible:outline-2 disabled:cursor-wait"
             onClick={() => router.push(`/companies/${company.id}`)}
           >
             {value}
@@ -161,6 +163,7 @@ export default function CompaniesPage() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
             aria-label={`View ${company.name}`}
             onClick={() => router.push(`/companies/${company.id}`)}
           >
@@ -169,6 +172,7 @@ export default function CompaniesPage() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
             aria-label={`Edit ${company.name}`}
             onClick={() => openEditForm(company)}
           >
@@ -177,6 +181,7 @@ export default function CompaniesPage() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
             aria-label={`Delete ${company.name}`}
             onClick={() => openDeleteDialog(company)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -206,7 +211,8 @@ export default function CompaniesPage() {
       <DataTable
         data={companiesData?.data || []}
         columns={columns}
-        loading={isLoading || isFetching}
+        loading={isLoading}
+        refreshing={isFetching && !isLoading}
         error={error?.message || null}
         pagination={companiesData?.pagination}
         onPageChange={handlePageChange}

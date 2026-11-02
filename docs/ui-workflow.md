@@ -4,6 +4,12 @@ This first interface pass focuses on the existing Companies and Contacts screens
 
 - Search remains available after a failed request, with clear-search and retry
   actions. Search text is controlled by the page so it survives query rerenders.
+- Initial loading uses the full spinner; background fetching retains loaded rows
+  and shows a small refresh hint. Company/contact queries use TanStack Query's
+  `keepPreviousData` when their keys change. Placeholder-row actions and stale
+  pagination/sorting controls are disabled until results settle. Empty placeholders
+  do not claim that the pending search has no matches. Failed background refreshes
+  keep the last loaded rows next to a retry alert.
 - Empty search results offer clearing the search. An empty address book offers
   adding the first record. Result totals remain visible on a single page.
 - Nested API values such as `_count.contacts` and `_count.deals` display their

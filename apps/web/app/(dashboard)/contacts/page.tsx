@@ -37,6 +37,7 @@ export default function ContactsPage() {
     data: contactsData,
     isLoading,
     isFetching,
+    isPlaceholderData,
     error,
     refetch,
   } = useContacts({
@@ -113,7 +114,8 @@ export default function ContactsPage() {
       render: (value, contact) => (
         <div>
           <button
-            className="text-left font-medium text-blue-700 hover:underline focus-visible:outline-2"
+            disabled={isPlaceholderData}
+            className="text-left font-medium text-blue-700 hover:underline focus-visible:outline-2 disabled:cursor-wait"
             onClick={() => router.push(`/contacts/${contact.id}`)}
           >
             {contact.firstName} {contact.lastName}
@@ -169,6 +171,7 @@ export default function ContactsPage() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
             aria-label={`View ${contact.firstName} ${contact.lastName}`}
             onClick={() => router.push(`/contacts/${contact.id}`)}
           >
@@ -177,6 +180,7 @@ export default function ContactsPage() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
             aria-label={`Edit ${contact.firstName} ${contact.lastName}`}
             onClick={() => openEditForm(contact)}
           >
@@ -185,6 +189,7 @@ export default function ContactsPage() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
             aria-label={`Delete ${contact.firstName} ${contact.lastName}`}
             onClick={() => openDeleteDialog(contact)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -216,7 +221,8 @@ export default function ContactsPage() {
       <DataTable
         data={contactsData?.data || []}
         columns={columns}
-        loading={isLoading || isFetching}
+        loading={isLoading}
+        refreshing={isFetching && !isLoading}
         error={error?.message || null}
         pagination={contactsData?.pagination}
         onPageChange={handlePageChange}
