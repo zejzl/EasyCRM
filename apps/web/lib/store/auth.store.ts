@@ -24,6 +24,7 @@ interface AuthState {
   // Actions
   login: (credentials: LoginInput) => Promise<void>;
   register: (userData: RegisterInput) => Promise<void>;
+  acceptInvite: (data: { invite: string; password: string; name?: string }) => Promise<void>;
   logout: () => void;
   refreshAccessToken: () => Promise<boolean>;
   setUser: (user: User | null) => void;
@@ -73,6 +74,18 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      acceptInvite: async (data) => {
+        set({ isLoading: true });
+        try {
+          const response = await apiClient.post('/auth/register', data);
+          const { user, accessToken, refreshToken } = response.data;
+          set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false });
         } catch (error) {
           set({ isLoading: false });
           throw error;

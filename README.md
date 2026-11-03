@@ -152,6 +152,21 @@ npx prisma migrate dev
 npm run db:seed
 ```
 
+### Accounts and access (invite-only)
+
+Self sign-up is closed by default (`REGISTRATION_MODE=closed`); one organisation, accounts by invitation.
+
+```bash
+# First administrator (password from ADMIN_PASSWORD, or typed when asked)
+npm run admin --workspace apps/api -- create-admin --email you@example.com --name "Your Name"
+# Invite link for a colleague, valid 7 days (roles: ADMIN, SALES_MANAGER, SALES_REP, VIEWER)
+npm run admin --workspace apps/api -- invite --email ana@example.com --name "Ana" --role SALES_REP
+```
+
+Administrators can also call `POST /api/users/invites` and `PATCH /api/users/:id` (role, `isActive`).
+Roles on records: VIEWER is read-only; only ADMIN can delete. `REGISTRATION_MODE=open` restores public sign-up
+(as SALES_REP) for local demos. The seed's demo accounts appear on the login page only in development.
+
 ### 5. Start Development Servers
 
 ```bash

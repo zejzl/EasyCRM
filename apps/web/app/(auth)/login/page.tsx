@@ -4,12 +4,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginInput } from '@crm/types';
 import { useLogin } from '@/lib/api/auth.api';
+import { useRegistrationMode } from '@/lib/api/registration.api';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const login = useLogin();
+  const registrationMode = useRegistrationMode();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -109,21 +111,29 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="text-center text-sm text-gray-600">
-        Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-          Sign up
-        </Link>
-      </div>
-
-      {/* Demo credentials */}
-      <div className="rounded-md bg-blue-50 p-4">
-        <p className="mb-2 text-sm font-medium text-blue-800">Demo Credentials:</p>
-        <div className="space-y-1 text-xs text-blue-700">
-          <p>Admin: admin@crm.local / admin123</p>
-          <p>Sales: sales@crm.local / sales123</p>
+      {registrationMode.data === 'open' ? (
+        <div className="text-center text-sm text-gray-600">
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+            Sign up
+          </Link>
         </div>
-      </div>
+      ) : (
+        <p className="text-center text-sm text-gray-600">
+          New here? Ask your administrator for an invite link.
+        </p>
+      )}
+
+      {/* Demo credentials: the seed's well-known passwords, shown only in development builds */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="rounded-md bg-blue-50 p-4">
+          <p className="mb-2 text-sm font-medium text-blue-800">Demo Credentials:</p>
+          <div className="space-y-1 text-xs text-blue-700">
+            <p>Admin: admin@crm.local / admin123</p>
+            <p>Sales: sales@crm.local / sales123</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -81,3 +81,27 @@ export const authorize = (...roles: string[]) => {
     next();
   };
 };
+
+// Role rules for the record routers (companies, contacts, deals, activities), Zejzl's D3 decision 2026-11-03:
+// VIEWER is read-only, and only ADMIN may delete. Mounted after authenticate.
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+export const writeGuard = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  if (READ_METHODS.has(req.method)) {
+    next();
+    return;
+  }
+  if (req.user.role === 'VIEWER') {
+    res.status(403).json({ error: 'Forbidden: viewers have read-only access' });
+    return;
+  }
+  if (req.method === 'DELETE' && req.user.role !== 'ADMIN') {
+    res.status(403).json({ error: 'Forbidden: only administrators can delete records' });
+    return;
+  }
+  next();
+};
