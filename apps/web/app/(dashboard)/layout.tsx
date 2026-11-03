@@ -3,31 +3,25 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/lib/store/auth.store';
 import { useCurrentUser } from '@/lib/api/auth.api';
-import { Loading } from '@crm/ui';
 import { Sidebar } from '@/components/layouts/Sidebar';
 import { Header } from '@/components/layouts/Header';
+import { RequireAuth } from '@/components/auth/AuthGuards';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { initialize, isLoading, isAuthenticated } = useAuthStore();
-  const { data: currentUser } = useCurrentUser();
+  return (
+    <RequireAuth>
+      <DashboardShell>{children}</DashboardShell>
+    </RequireAuth>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
+  const initialize = useAuthStore((s) => s.initialize);
+  useCurrentUser();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
-
-  // Show loading while initializing auth state
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loading size="lg" text="Loading..." />
-      </div>
-    );
-  }
-
-  // If not authenticated, this layout shouldn't render (middleware should redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="flex h-screen bg-gray-50">

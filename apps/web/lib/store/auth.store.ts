@@ -1,7 +1,9 @@
+import axios from 'axios';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { LoginInput, RegisterInput } from '@crm/types';
 import apiClient from '../api/client';
+import { API_BASE } from '../api/base';
 
 interface User {
   id: string;
@@ -17,6 +19,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  hasHydrated: boolean;
 
   // Actions
   login: (credentials: LoginInput) => Promise<void>;
@@ -25,6 +28,7 @@ interface AuthState {
   refreshAccessToken: () => Promise<boolean>;
   setUser: (user: User | null) => void;
   initialize: () => void;
+  setHasHydrated: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -35,11 +39,12 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      hasHydrated: false,
 
       login: async (credentials: LoginInput) => {
         set({ isLoading: true });
         try {
-          const response = await apiClient.post('/api/auth/login', credentials);
+          const response = await apiClient.post('/auth/login', credentials);
           const { user, accessToken, refreshToken } = response.data;
 
           set({
@@ -58,7 +63,7 @@ export const useAuthStore = create<AuthState>()(
       register: async (userData: RegisterInput) => {
         set({ isLoading: true });
         try {
-          const response = await apiClient.post('/api/auth/register', userData);
+          const response = await apiClient.post('/auth/register', userData);
           const { user, accessToken, refreshToken } = response.data;
 
           set({
@@ -93,9 +98,9 @@ export const useAuthStore = create<AuthState>()(
         if (!refreshToken) return false;
 
         try {
-          const response = await apiClient.post('/api/auth/refresh', {
-            refreshToken,
-          });
+          // Plain axios, not apiClient: a 401 here must fail this call, not enter apiClient's 401 handler, which is
+          // itself waiting for this refresh (the queued request would never settle).
+          const response = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken });
           const { accessToken, refreshToken: newRefreshToken } = response.data;
 
           set({
@@ -116,29 +121,20 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initialize: () => {
-        // Check for stored tokens on app initialization
-        if (typeof window !== 'undefined') {
-          const accessToken = localStorage.getItem('accessToken');
-          const refreshToken = localStorage.getItem('refreshToken');
+        // Tokens are restored by the persist middleware (key 'auth-storage'); nothing else stores them.
+        set({ isLoading: false });
+      },
 
-          if (accessToken && refreshToken) {
-            set({
-              accessToken,
-              refreshToken,
-              isAuthenticated: true,
-              isLoading: false,
-            });
-          } else {
-            set({
-              isLoading: false,
-            });
-          }
-        }
+      setHasHydrated: (value: boolean) => {
+        set({ hasHydrated: value });
       },
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

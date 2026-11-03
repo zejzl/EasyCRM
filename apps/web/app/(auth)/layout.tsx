@@ -1,4 +1,5 @@
 import { Logo } from '@crm/ui'
+import { RedirectIfAuthenticated } from '@/components/auth/AuthGuards'
 
 export default function AuthLayout({
   children,
@@ -100,7 +101,7 @@ export default function AuthLayout({
           <div className="mb-8 lg:hidden">
             <Logo size="md" />
           </div>
-          {children}
+          <RedirectIfAuthenticated>{children}</RedirectIfAuthenticated>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LoginInput, RegisterInput } from '@crm/types';
 import { useAuthStore } from '../store/auth.store';
+import apiClient from './client';
 
 // Login mutation
 export const useLogin = () => {
@@ -31,12 +32,10 @@ export const useCurrentUser = () => {
   return useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      const userData = await response.json();
+      // Through apiClient: same base URL as every other call, and its interceptors add the stored token and refresh
+      // it on a 401. (A plain fetch here used NEXT_PUBLIC_API_URL unchecked and a localStorage key nothing writes.)
+      const response = await apiClient.get('/users/me');
+      const userData = response.data;
       setUser(userData);
       return userData;
     },
