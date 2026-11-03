@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --schema packages/database/schema.prisma
+      - name: web type-check
+        run: npm run type-check --workspace apps/web
+      - name: web lint
+        run: npm run lint --workspace apps/web
+      - name: web tests
+        run: npm test --workspace apps/web
+      - name: api tests
+        run: npm test --workspace apps/api -- --run
+      # The API type-check is left out on purpose: main has 4 known errors in deal/activity routes (prisma update types).

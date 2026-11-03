@@ -1,8 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { authStore } from '../store/auth.store';
+import { API_BASE, isAuthEndpoint } from './base';
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -50,14 +51,19 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // If error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // If error is 401 and we haven't retried yet. Auth endpoints are excluded: a wrong password must reach the login
+    // form as an error, and a rejected refresh must not queue behind the refresh that is waiting for it.
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint(originalRequest.url)) {
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then(() => {
+          .then((token) => {
+            if (originalRequest.headers && token) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            originalRequest._retry = true;
             return apiClient(originalRequest);
           })
           .catch((err) => {

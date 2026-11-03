@@ -5,6 +5,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import { config } from 'dotenv';
+import { corsOrigins } from './config/cors';
 import { rateLimit } from 'express-rate-limit';
 
 // Load environment variables
@@ -29,7 +30,7 @@ const PORT = process.env.PORT || 4000;
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  origin: corsOrigins(),
   credentials: true,
 }));
 
