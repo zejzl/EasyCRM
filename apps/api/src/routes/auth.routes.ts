@@ -3,7 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@crm/database';
 import { loginSchema, registerSchema, type AuthResponse } from '@crm/types';
+import { z } from 'zod';
 import { AppError } from '../middleware/error.middleware';
+import { registrationMode, verifyInvite, type InviteRole } from '../config/registration';
 
 const router = Router();
 
@@ -28,14 +30,59 @@ const generateTokens = (userId: string, email: string, role: string) => {
   return { accessToken, refreshToken };
 };
 
+// GET /api/auth/registration: tells the web app whether to offer self sign-up.
+router.get('/registration', (req, res) => {
+  res.json({ mode: registrationMode() });
+});
+
+// GET /api/auth/invite?token=...: the email and name an invite is for, so the sign-up form can show them.
+router.get('/invite', (req, res) => {
+  const invite = typeof req.query.token === 'string' ? verifyInvite(req.query.token) : null;
+  if (!invite) {
+    res.status(400).json({ error: 'This invite link is invalid or has expired' });
+    return;
+  }
+  res.json({ email: invite.email, name: invite.name });
+});
+
+const inviteRegisterSchema = z.object({
+  invite: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  name: z.string().min(1).optional(),
+});
+
 // POST /api/auth/register
+// With an invite token: creates the invited account (email and role come from the invite). Without one: only when
+// REGISTRATION_MODE=open, as SALES_REP. Otherwise 403. (F02: the endpoint used to be open to anyone.)
 router.post('/register', async (req, res, next) => {
   try {
-    const data = registerSchema.parse(req.body);
+    let email: string;
+    let name: string;
+    let password: string;
+    let role: InviteRole = 'SALES_REP';
 
-    // Check if user exists
+    if (typeof req.body?.invite === 'string') {
+      const data = inviteRegisterSchema.parse(req.body);
+      const invite = verifyInvite(data.invite);
+      if (!invite) {
+        throw new AppError(400, 'This invite link is invalid or has expired');
+      }
+      email = invite.email;
+      name = data.name || invite.name;
+      password = data.password;
+      role = invite.role;
+    } else if (registrationMode() === 'open') {
+      const data = registerSchema.parse(req.body);
+      email = data.email;
+      name = data.name;
+      password = data.password;
+    } else {
+      throw new AppError(403, 'Registration is invite-only. Ask an administrator for an invite.');
+    }
+
+    // Check if user exists (this also makes an invite single-use)
     const existing = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email },
     });
 
     if (existing) {
@@ -43,14 +90,15 @@ router.post('/register', async (req, res, next) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
     const user = await prisma.user.create({
       data: {
-        email: data.email,
-        name: data.name,
+        email,
+        name,
         password: hashedPassword,
+        role,
       },
       select: {
         id: true,

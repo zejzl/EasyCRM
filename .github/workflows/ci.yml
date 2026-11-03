@@ -11,6 +11,19 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: crm
+          POSTGRES_PASSWORD: crm
+          POSTGRES_DB: crm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U crm" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Throwaway database inside the CI job; the integration tests empty it.
+      TEST_DATABASE_URL: postgresql://crm:crm@localhost:5432/crm_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,12 +32,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate --schema packages/database/schema.prisma
+      - run: npx prisma db push --schema packages/database/schema.prisma --skip-generate
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
       - name: web type-check
         run: npm run type-check --workspace apps/web
       - name: web lint
         run: npm run lint --workspace apps/web
       - name: web tests
         run: npm test --workspace apps/web
-      - name: api tests
+      - name: api tests (unit + integration against the job's Postgres)
         run: npm test --workspace apps/api -- --run
       # The API type-check is left out on purpose: main has 4 known errors in deal/activity routes (prisma update types).

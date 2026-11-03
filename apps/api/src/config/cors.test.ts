@@ -15,7 +15,7 @@ describe('corsOrigins', () => {
   });
 
   it('the server uses WEB_ORIGIN, not the API URL, for CORS', () => {
-    const index = readFileSync(join(__dirname, '..', 'index.ts'), 'utf8');
+    const index = readFileSync(join(__dirname, '..', 'app.ts'), 'utf8');
     expect(index).toMatch(/origin: corsOrigins\(\)/);
     expect(index).not.toMatch(/origin: process\.env\.NEXT_PUBLIC_API_URL/);
   });
