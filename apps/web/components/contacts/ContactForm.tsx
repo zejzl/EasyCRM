@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createContactSchema, CreateContactInput, UpdateContactInput } from '@crm/types';
@@ -31,6 +32,7 @@ interface ContactFormProps {
   contact?: any; // Contact type from API
   onSubmit: (data: CreateContactInput | UpdateContactInput) => Promise<void>;
   loading?: boolean;
+  error?: string | null;
 }
 
 const departments = [
@@ -70,12 +72,42 @@ const titles = [
   'Other',
 ];
 
+const contactValues = (contact?: any) =>
+  contact
+    ? {
+        firstName: contact.firstName || '',
+        lastName: contact.lastName || '',
+        email: contact.email || '',
+        phone: contact.phone || '',
+        mobile: contact.mobile || '',
+        title: contact.title || '',
+        department: contact.department || '',
+        linkedinUrl: contact.linkedinUrl || '',
+        avatarUrl: contact.avatarUrl || '',
+        isPrimary: contact.isPrimary || false,
+        companyId: contact.company?.id || contact.companyId || '',
+      }
+    : {
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        mobile: '',
+        title: '',
+        department: '',
+        linkedinUrl: '',
+        avatarUrl: '',
+        isPrimary: false,
+        companyId: '',
+      };
+
 export function ContactForm({
   open,
   onOpenChange,
   contact,
   onSubmit,
   loading = false,
+  error = null,
 }: ContactFormProps) {
   const isEditing = !!contact;
 
@@ -92,34 +124,13 @@ export function ContactForm({
     formState: { errors, isSubmitting },
   } = useForm<CreateContactInput>({
     resolver: zodResolver(createContactSchema),
-    defaultValues: contact
-      ? {
-          firstName: contact.firstName || '',
-          lastName: contact.lastName || '',
-          email: contact.email || '',
-          phone: contact.phone || '',
-          mobile: contact.mobile || '',
-          title: contact.title || '',
-          department: contact.department || '',
-          linkedinUrl: contact.linkedinUrl || '',
-          avatarUrl: contact.avatarUrl || '',
-          isPrimary: contact.isPrimary || false,
-          companyId: contact.company?.id || contact.companyId || '',
-        }
-      : {
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          mobile: '',
-          title: '',
-          department: '',
-          linkedinUrl: '',
-          avatarUrl: '',
-          isPrimary: false,
-          companyId: '',
-        },
+    defaultValues: contactValues(contact),
   });
+
+  // Forms stay mounted between records; react-hook-form reads defaults only once.
+  useEffect(() => {
+    if (open) reset(contactValues(contact));
+  }, [open, contact, reset]);
 
   const watchedCompanyId = watch('companyId');
   const watchedTitle = watch('title');
@@ -133,8 +144,8 @@ export function ContactForm({
         reset();
       }
       onOpenChange(false);
-    } catch (error) {
-      // Error is handled by the mutation
+    } catch {
+      // The parent displays mutation errors; keep the form and its input open.
     }
   };
 
@@ -297,6 +308,12 @@ export function ContactForm({
               <Label htmlFor="isPrimary">Primary Contact</Label>
             </div>
           </div>
+
+          {error && (
+            <p role="alert" className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
 
           <DialogFooter>
             <Button

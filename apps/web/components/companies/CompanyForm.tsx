@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createCompanySchema, CreateCompanyInput, UpdateCompanyInput } from '@crm/types';
@@ -30,6 +31,7 @@ interface CompanyFormProps {
   company?: any; // Company type from API
   onSubmit: (data: CreateCompanyInput | UpdateCompanyInput) => Promise<void>;
   loading?: boolean;
+  error?: string | null;
 }
 
 const companySizes = [
@@ -56,12 +58,46 @@ const industries = [
   'Other',
 ];
 
+const companyValues = (company?: any) =>
+  company
+    ? {
+        name: company.name || '',
+        domain: company.domain || '',
+        industry: company.industry || '',
+        size: company.size || undefined,
+        revenue: company.revenue || undefined,
+        description: company.description || '',
+        website: company.website || '',
+        linkedinUrl: company.linkedinUrl || '',
+        phone: company.phone || '',
+        address: company.address || '',
+        city: company.city || '',
+        state: company.state || '',
+        country: company.country || '',
+        postalCode: company.postalCode || '',
+      }
+    : {
+        name: '',
+        domain: '',
+        industry: '',
+        description: '',
+        website: '',
+        linkedinUrl: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+        postalCode: '',
+      };
+
 export function CompanyForm({
   open,
   onOpenChange,
   company,
   onSubmit,
   loading = false,
+  error = null,
 }: CompanyFormProps) {
   const isEditing = !!company;
 
@@ -74,38 +110,13 @@ export function CompanyForm({
     formState: { errors, isSubmitting },
   } = useForm<CreateCompanyInput>({
     resolver: zodResolver(createCompanySchema),
-    defaultValues: company
-      ? {
-          name: company.name || '',
-          domain: company.domain || '',
-          industry: company.industry || '',
-          size: company.size || undefined,
-          revenue: company.revenue || undefined,
-          description: company.description || '',
-          website: company.website || '',
-          linkedinUrl: company.linkedinUrl || '',
-          phone: company.phone || '',
-          address: company.address || '',
-          city: company.city || '',
-          state: company.state || '',
-          country: company.country || '',
-          postalCode: company.postalCode || '',
-        }
-      : {
-          name: '',
-          domain: '',
-          industry: '',
-          description: '',
-          website: '',
-          linkedinUrl: '',
-          phone: '',
-          address: '',
-          city: '',
-          state: '',
-          country: '',
-          postalCode: '',
-        },
+    defaultValues: companyValues(company),
   });
+
+  // Forms stay mounted between records; react-hook-form reads defaults only once.
+  useEffect(() => {
+    if (open) reset(companyValues(company));
+  }, [open, company, reset]);
 
   const watchedSize = watch('size');
   const watchedIndustry = watch('industry');
@@ -117,8 +128,8 @@ export function CompanyForm({
         reset();
       }
       onOpenChange(false);
-    } catch (error) {
-      // Error is handled by the mutation
+    } catch {
+      // The parent displays mutation errors; keep the form and its input open.
     }
   };
 
@@ -270,6 +281,12 @@ export function CompanyForm({
               <Input id="country" {...register('country')} placeholder="Country" />
             </div>
           </div>
+
+          {error && (
+            <p role="alert" className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
 
           <DialogFooter>
             <Button

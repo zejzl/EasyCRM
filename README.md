@@ -78,6 +78,10 @@ crm/
 
 ## 📊 Current Status
 
+Company/contact interface improvements and isolated UI regression checks:
+[docs/ui-workflow.md](docs/ui-workflow.md). Run `npm run test:ui` after installing
+the workspace dependencies.
+
 **Version**: 1.4.0  
 **Last Updated**: January 24, 2026  
 **Development Phase**: Phase 6 (Advanced Activity Tracking) - **Activity Intelligence Complete**

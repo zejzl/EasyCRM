@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { CreateCompanyInput, UpdateCompanyInput } from '@crm/types';
 import apiClient from './client';
@@ -15,6 +15,7 @@ export interface CompaniesFilters {
 export const useCompanies = (filters: CompaniesFilters = {}) => {
   return useQuery({
     queryKey: ['companies', filters],
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const params = new URLSearchParams();
 

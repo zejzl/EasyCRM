@@ -6,7 +6,6 @@ import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -32,11 +31,15 @@ export default function CompaniesPage() {
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<any>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const {
     data: companiesData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
+    refetch,
   } = useCompanies({
     ...filters,
     search: searchQuery || undefined,
@@ -71,24 +74,34 @@ export default function CompaniesPage() {
   };
 
   const handleDeleteCompany = async () => {
-    if (companyToDelete) {
+    if (!companyToDelete || deleteCompany.isPending) return;
+    setDeleteError(null);
+    try {
       await deleteCompany.mutateAsync(companyToDelete.id);
+      if (companiesData?.data.length === 1 && (filters.page || 1) > 1) {
+        setFilters((previous) => ({ ...previous, page: (previous.page || 1) - 1 }));
+      }
       setCompanyToDelete(null);
       setDeleteDialogOpen(false);
+    } catch {
+      setDeleteError('Could not confirm deletion. Please try again.');
     }
   };
 
   const openCreateForm = () => {
+    createCompany.reset();
     setEditingCompany(null);
     setFormOpen(true);
   };
 
   const openEditForm = (company: any) => {
+    updateCompany.reset();
     setEditingCompany(company);
     setFormOpen(true);
   };
 
   const openDeleteDialog = (company: any) => {
+    setDeleteError(null);
     setCompanyToDelete(company);
     setDeleteDialogOpen(true);
   };
@@ -100,7 +113,13 @@ export default function CompaniesPage() {
       sortable: true,
       render: (value, company) => (
         <div>
-          <div className="font-medium text-gray-900">{value}</div>
+          <button
+            disabled={isPlaceholderData}
+            className="text-left font-medium text-blue-700 hover:underline focus-visible:outline-2 disabled:cursor-wait"
+            onClick={() => router.push(`/companies/${company.id}`)}
+          >
+            {value}
+          </button>
           {company.domain && <div className="text-sm text-gray-500">{company.domain}</div>}
         </div>
       ),
@@ -141,15 +160,29 @@ export default function CompaniesPage() {
       header: 'Actions',
       render: (_, company) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => router.push(`/companies/${company.id}`)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isPlaceholderData}
+            aria-label={`View ${company.name}`}
+            onClick={() => router.push(`/companies/${company.id}`)}
+          >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => openEditForm(company)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isPlaceholderData}
+            aria-label={`Edit ${company.name}`}
+            onClick={() => openEditForm(company)}
+          >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
+            aria-label={`Delete ${company.name}`}
             onClick={() => openDeleteDialog(company)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
@@ -163,7 +196,7 @@ export default function CompaniesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Companies</h1>
           <p className="text-muted-foreground">Manage your company records and relationships.</p>
@@ -179,13 +212,20 @@ export default function CompaniesPage() {
         data={companiesData?.data || []}
         columns={columns}
         loading={isLoading}
+        refreshing={isFetching && !isLoading}
         error={error?.message || null}
         pagination={companiesData?.pagination}
         onPageChange={handlePageChange}
         onSortChange={handleSortChange}
         onSearchChange={handleSearchChange}
+        searchValue={searchQuery}
         searchPlaceholder="Search companies..."
-        emptyMessage="No companies found. Create your first company to get started."
+        emptyMessage="No companies yet"
+        onRetry={() => {
+          void refetch();
+        }}
+        onCreate={openCreateForm}
+        createLabel="Add Company"
       />
 
       {/* Create/Edit Form */}
@@ -195,10 +235,20 @@ export default function CompaniesPage() {
         company={editingCompany}
         onSubmit={editingCompany ? handleUpdateCompany : handleCreateCompany}
         loading={createCompany.isPending || updateCompany.isPending}
+        error={
+          (editingCompany ? updateCompany.isError : createCompany.isError)
+            ? 'Unable to save. Please check the details and try again.'
+            : null
+        }
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!deleteCompany.isPending) setDeleteDialogOpen(open);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Company</AlertDialogTitle>
@@ -207,14 +257,21 @@ export default function CompaniesPage() {
               cannot be undone. All associated contacts and deals will also be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteError && (
+            <p role="alert" className="text-sm text-red-600">
+              {deleteError}
+            </p>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel disabled={deleteCompany.isPending}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleteCompany.isPending}
               onClick={handleDeleteCompany}
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteCompany.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

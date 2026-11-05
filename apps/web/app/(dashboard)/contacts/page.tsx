@@ -6,7 +6,6 @@ import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -32,11 +31,15 @@ export default function ContactsPage() {
   const [editingContact, setEditingContact] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<any>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const {
     data: contactsData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
+    refetch,
   } = useContacts({
     ...filters,
     search: searchQuery || undefined,
@@ -71,24 +74,34 @@ export default function ContactsPage() {
   };
 
   const handleDeleteContact = async () => {
-    if (contactToDelete) {
+    if (!contactToDelete || deleteContact.isPending) return;
+    setDeleteError(null);
+    try {
       await deleteContact.mutateAsync(contactToDelete.id);
+      if (contactsData?.data.length === 1 && (filters.page || 1) > 1) {
+        setFilters((previous) => ({ ...previous, page: (previous.page || 1) - 1 }));
+      }
       setContactToDelete(null);
       setDeleteDialogOpen(false);
+    } catch {
+      setDeleteError('Could not confirm deletion. Please try again.');
     }
   };
 
   const openCreateForm = () => {
+    createContact.reset();
     setEditingContact(null);
     setFormOpen(true);
   };
 
   const openEditForm = (contact: any) => {
+    updateContact.reset();
     setEditingContact(contact);
     setFormOpen(true);
   };
 
   const openDeleteDialog = (contact: any) => {
+    setDeleteError(null);
     setContactToDelete(contact);
     setDeleteDialogOpen(true);
   };
@@ -100,9 +113,13 @@ export default function ContactsPage() {
       sortable: true,
       render: (value, contact) => (
         <div>
-          <div className="font-medium text-gray-900">
+          <button
+            disabled={isPlaceholderData}
+            className="text-left font-medium text-blue-700 hover:underline focus-visible:outline-2 disabled:cursor-wait"
+            onClick={() => router.push(`/contacts/${contact.id}`)}
+          >
             {contact.firstName} {contact.lastName}
-          </div>
+          </button>
           {contact.email && <div className="text-sm text-gray-500">{contact.email}</div>}
           {contact.title && <div className="text-xs text-gray-400">{contact.title}</div>}
         </div>
@@ -151,15 +168,29 @@ export default function ContactsPage() {
       header: 'Actions',
       render: (_, contact) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => router.push(`/contacts/${contact.id}`)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isPlaceholderData}
+            aria-label={`View ${contact.firstName} ${contact.lastName}`}
+            onClick={() => router.push(`/contacts/${contact.id}`)}
+          >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => openEditForm(contact)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isPlaceholderData}
+            aria-label={`Edit ${contact.firstName} ${contact.lastName}`}
+            onClick={() => openEditForm(contact)}
+          >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            disabled={isPlaceholderData}
+            aria-label={`Delete ${contact.firstName} ${contact.lastName}`}
             onClick={() => openDeleteDialog(contact)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
@@ -173,7 +204,7 @@ export default function ContactsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
           <p className="text-muted-foreground">
@@ -191,13 +222,20 @@ export default function ContactsPage() {
         data={contactsData?.data || []}
         columns={columns}
         loading={isLoading}
+        refreshing={isFetching && !isLoading}
         error={error?.message || null}
         pagination={contactsData?.pagination}
         onPageChange={handlePageChange}
         onSortChange={handleSortChange}
         onSearchChange={handleSearchChange}
+        searchValue={searchQuery}
         searchPlaceholder="Search contacts..."
-        emptyMessage="No contacts found. Create your first contact to get started."
+        emptyMessage="No contacts yet"
+        onRetry={() => {
+          void refetch();
+        }}
+        onCreate={openCreateForm}
+        createLabel="Add Contact"
       />
 
       {/* Create/Edit Form */}
@@ -207,27 +245,44 @@ export default function ContactsPage() {
         contact={editingContact}
         onSubmit={editingContact ? handleUpdateContact : handleCreateContact}
         loading={createContact.isPending || updateContact.isPending}
+        error={
+          (editingContact ? updateContact.isError : createContact.isError)
+            ? 'Unable to save. Please check the details and try again.'
+            : null
+        }
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!deleteContact.isPending) setDeleteDialogOpen(open);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Contact</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{contactToDelete?.firstName}{' '}
-              {contactToDelete?.lastName}&quot;? This action cannot be undone. All associated activities
-              and notes will also be affected.
+              {contactToDelete?.lastName}&quot;? This action cannot be undone. All associated
+              activities and notes will also be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteError && (
+            <p role="alert" className="text-sm text-red-600">
+              {deleteError}
+            </p>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel disabled={deleteContact.isPending}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleteContact.isPending}
               onClick={handleDeleteContact}
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteContact.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
