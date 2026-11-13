@@ -3,14 +3,15 @@ import { prisma } from '@crm/database';
 import { activitySchema, updateActivitySchema } from '@crm/types';
 import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
+import { parseListQuery } from './listQuery';
 
 const router = Router();
 
 // GET /api/activities - List activities
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { page = 1, limit = 20, type, dealId, contactId, dateFrom, dateTo } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { type, dealId, contactId, dateFrom, dateTo } = req.query;
+    const { page, limit, skip } = parseListQuery(req.query);
 
     // Build where clause
     const where: any = {};
@@ -39,7 +40,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       prisma.activity.findMany({
         where,
         skip,
-        take: Number(limit),
+        take: limit,
         include: {
           createdBy: {
             select: {
@@ -75,10 +76,10 @@ router.get('/', async (req: AuthRequest, res, next) => {
     res.json({
       data: activities,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page,
+        limit,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {
