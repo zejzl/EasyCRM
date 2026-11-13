@@ -260,4 +260,46 @@ suite('access policy (integration)', () => {
       }
     });
   });
+
+  // F11: list routes refuse unbounded or unknown paging and sorting with a 400 instead of passing them to Prisma.
+  describe('bounded list queries', () => {
+    it('refuses huge pages, bad pages and unknown sort keys on every list route', async () => {
+      const a = await user('admin@crm.test', 'ADMIN');
+      for (const path of ['/companies', '/contacts', '/deals', '/activities']) {
+        for (const q of ['limit=100000', 'limit=0', 'page=0', 'page=abc']) {
+          const res = await call('GET', `${path}?${q}`, undefined, a.token);
+          expect([path, q, res.status]).toEqual([path, q, 400]);
+          expect(res.body.error).toBe('Validation failed');
+        }
+      }
+      for (const path of ['/companies', '/contacts']) {
+        for (const q of ['sortBy=__proto__', 'sortBy=nope', 'sortBy=name&sortOrder=sideways']) {
+          const res = await call('GET', `${path}?${q}`, undefined, a.token);
+          expect([path, q, res.status]).toEqual([path, q, 400]);
+        }
+      }
+    });
+
+    it('still serves the pages the web app asks for, including the 1000-row pickers', async () => {
+      const a = await user('admin@crm.test', 'ADMIN');
+      const zeta = await prisma.company.create({ data: { name: 'Zeta d.o.o.' } });
+      const alfa = await prisma.company.create({ data: { name: 'Alfa d.o.o.' } });
+      await prisma.contact.create({ data: { firstName: 'Ana', lastName: 'Z', companyId: zeta.id } });
+      await prisma.contact.create({ data: { firstName: 'Bor', lastName: 'A', companyId: alfa.id } });
+
+      const companies = await call('GET', '/companies?limit=1000&sortBy=name&sortOrder=asc', undefined, a.token);
+      expect(companies.status).toBe(200);
+      expect(companies.body.data.map((c: { name: string }) => c.name)).toEqual(['Alfa d.o.o.', 'Zeta d.o.o.']);
+      expect(companies.body.pagination).toEqual({ page: 1, limit: 1000, total: 2, totalPages: 1 });
+
+      // the contacts table's Company column: used to reach Prisma as orderBy { company: 'asc' } and fail
+      const contacts = await call('GET', '/contacts?sortBy=company&sortOrder=asc', undefined, a.token);
+      expect(contacts.status).toBe(200);
+      expect(contacts.body.data.map((c: { firstName: string }) => c.firstName)).toEqual(['Bor', 'Ana']);
+
+      for (const path of ['/deals?limit=1000', '/activities?page=2&limit=5']) {
+        expect((await call('GET', path, undefined, a.token)).status).toBe(200);
+      }
+    });
+  });
 });

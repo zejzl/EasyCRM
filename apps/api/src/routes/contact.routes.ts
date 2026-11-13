@@ -3,14 +3,19 @@ import { prisma } from '@crm/database';
 import { createContactSchema, updateContactSchema } from '@crm/types';
 import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
+import { CONTACT_SORTS, parseListQuery } from './listQuery';
 
 const router = Router();
 
 // GET /api/contacts - List contacts
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { page = 1, limit = 20, companyId, search, sortBy, sortOrder } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { companyId, search } = req.query;
+    const { page, limit, skip, orderBy } = parseListQuery(req.query, {
+      allowed: CONTACT_SORTS,
+      defaultKey: 'createdAt',
+      defaultOrder: 'desc',
+    });
 
     // Build where clause
     const where: any = {};
@@ -29,17 +34,11 @@ router.get('/', async (req: AuthRequest, res, next) => {
       ];
     }
 
-    // Build order by clause
-    let orderBy: any = { createdAt: 'desc' };
-    if (sortBy && sortOrder) {
-      orderBy = { [String(sortBy)]: String(sortOrder) };
-    }
-
     const [contacts, total] = await Promise.all([
       prisma.contact.findMany({
         where,
         skip,
-        take: Number(limit),
+        take: limit,
         include: {
           company: {
             select: {
@@ -57,10 +56,10 @@ router.get('/', async (req: AuthRequest, res, next) => {
     res.json({
       data: contacts,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page,
+        limit,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {

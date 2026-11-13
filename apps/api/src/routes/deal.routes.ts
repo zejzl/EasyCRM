@@ -8,14 +8,15 @@ import {
 } from '@crm/types';
 import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
+import { parseListQuery } from './listQuery';
 
 const router = Router();
 
 // GET /api/deals - List deals
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { page = 1, limit = 20, status, stageId, ownerId } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { status, stageId, ownerId } = req.query;
+    const { page, limit, skip } = parseListQuery(req.query);
 
     const where: any = {};
     if (status) where.status = status;
@@ -26,7 +27,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       prisma.deal.findMany({
         where,
         skip,
-        take: Number(limit),
+        take: limit,
         include: {
           company: {
             select: {
@@ -60,10 +61,10 @@ router.get('/', async (req: AuthRequest, res, next) => {
     res.json({
       data: deals,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page,
+        limit,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {

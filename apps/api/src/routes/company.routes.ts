@@ -3,20 +3,24 @@ import { prisma } from '@crm/database';
 import { createCompanySchema, updateCompanySchema } from '@crm/types';
 import { AppError } from '../middleware/error.middleware';
 import type { AuthRequest } from '../middleware/auth.middleware';
+import { COMPANY_SORTS, parseListQuery } from './listQuery';
 
 const router = Router();
 
 // GET /api/companies - List all companies with pagination
 router.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page, limit, skip, orderBy } = parseListQuery(req.query, {
+      allowed: COMPANY_SORTS,
+      defaultKey: 'createdAt',
+      defaultOrder: 'desc',
+    });
 
     const [companies, total] = await Promise.all([
       prisma.company.findMany({
         skip,
-        take: Number(limit),
-        orderBy: { [sortBy as string]: sortOrder },
+        take: limit,
+        orderBy,
         include: {
           _count: {
             select: {
@@ -32,10 +36,10 @@ router.get('/', async (req: AuthRequest, res, next) => {
     res.json({
       data: companies,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page,
+        limit,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {
